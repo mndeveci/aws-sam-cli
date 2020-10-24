@@ -96,7 +96,7 @@ class TestBuildGraph(TestCase):
             build_dir = Path(temp_base_dir, ".aws-sam", "build")
             build_dir.mkdir(parents=True)
             build_graph1 = BuildGraph(str(build_dir.resolve()))
-            build_graph1.clean_redundant_functions_and_update(True)
+            build_graph1.clean_redundant_definitions_and_update(True)
 
             build_graph2 = BuildGraph(str(build_dir.resolve()))
 
@@ -118,7 +118,7 @@ class TestBuildGraph(TestCase):
                 runtime=TestBuildGraph.RUNTIME, codeuri=TestBuildGraph.CODEURI, metadata=TestBuildGraph.METADATA
             )
             build_graph1.put_function_build_definition(build_definition1, function1)
-            build_graph1.clean_redundant_functions_and_update(True)
+            build_graph1.clean_redundant_definitions_and_update(True)
 
             # read previously persisted graph and compare
             build_graph2 = BuildGraph(str(build_dir))

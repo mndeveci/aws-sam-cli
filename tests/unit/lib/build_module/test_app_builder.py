@@ -143,8 +143,8 @@ class TestApplicationBuilder_build(TestCase):
             any_order=True,
         )
 
-    @patch("samcli.lib.build.app_builder.AsyncContext")
-    def test_build_with_parallel(self, async_context_mock):
+    @patch("samcli.lib.build.app_builder.ParallelBuildStrategy")
+    def test_build_with_parallel(self, parallel_build_strategy_mock):
         resources_to_build_collector = ResourcesToBuildCollector()
         resources_to_build_collector.add_functions([Mock(), Mock()])
         resources_to_build_collector.add_layers([Mock(), Mock()])
@@ -155,7 +155,7 @@ class TestApplicationBuilder_build(TestCase):
             {"layer1": "build_location_1"},
             {"layer2": "build_location_2"},
         ]
-        async_context_mock.return_value.run_async.return_value = mock_return
+        parallel_build_strategy_mock.return_value.run_async.return_value = mock_return
 
         build_definitions_mock = Mock()
         build_definitions_mock.get_function_build_definitions.return_value = [
@@ -181,7 +181,7 @@ class TestApplicationBuilder_build(TestCase):
 
         self.assertEqual(build_result, expected_result)
 
-        async_context_mock.return_value.add_async_task.assert_has_calls(
+        parallel_build_strategy_mock.return_value.add_async_task.assert_has_calls(
             [
                 call(builder._build_single_function_definition, ANY),
                 call(builder._build_single_function_definition, ANY),
@@ -190,7 +190,7 @@ class TestApplicationBuilder_build(TestCase):
             ]
         )
 
-        async_context_mock.return_value.run_async.assert_has_calls([call()])
+        parallel_build_strategy_mock.return_value.run_async.assert_has_calls([call()])
 
 
 class TestApplicationBuilderForLayerBuild(TestCase):
