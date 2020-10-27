@@ -143,55 +143,6 @@ class TestApplicationBuilder_build(TestCase):
             any_order=True,
         )
 
-    @patch("samcli.lib.build.app_builder.ParallelBuildStrategy")
-    def test_build_with_parallel(self, parallel_build_strategy_mock):
-        resources_to_build_collector = ResourcesToBuildCollector()
-        resources_to_build_collector.add_functions([Mock(), Mock()])
-        resources_to_build_collector.add_layers([Mock(), Mock()])
-
-        mock_return = [
-            {"function1": "build_location_1"},
-            {"function2": "build_location_2"},
-            {"layer1": "build_location_1"},
-            {"layer2": "build_location_2"},
-        ]
-        parallel_build_strategy_mock.return_value.run_async.return_value = mock_return
-
-        build_definitions_mock = Mock()
-        build_definitions_mock.get_function_build_definitions.return_value = [
-            FunctionBuildDefinition("runtime", "codeuri", {}),
-            FunctionBuildDefinition("runtime", "codeuri", {}),
-        ]
-        build_definitions_mock.get_layer_build_definitions.return_value = [
-            LayerBuildDefinition("layer1", "codeuri", "build_method", []),
-            LayerBuildDefinition("layer2", "codeuri", "build_method", []),
-        ]
-        build_graph_mock = Mock()
-        build_graph_mock.return_value = build_definitions_mock
-
-        builder = ApplicationBuilder(resources_to_build_collector, "builddir", "basedir", "cachedir", parallel=True)
-        builder._get_build_graph = build_graph_mock
-        builder._build_single_function_definition = Mock()
-
-        build_result = builder.build()
-
-        expected_result = {}
-        for mock_return_result in mock_return:
-            expected_result.update(mock_return_result)
-
-        self.assertEqual(build_result, expected_result)
-
-        parallel_build_strategy_mock.return_value.add_async_task.assert_has_calls(
-            [
-                call(builder._build_single_function_definition, ANY),
-                call(builder._build_single_function_definition, ANY),
-                call(builder._build_single_layer_definition, ANY),
-                call(builder._build_single_layer_definition, ANY),
-            ]
-        )
-
-        parallel_build_strategy_mock.return_value.run_async.assert_has_calls([call()])
-
 
 class TestApplicationBuilderForLayerBuild(TestCase):
     def setUp(self):

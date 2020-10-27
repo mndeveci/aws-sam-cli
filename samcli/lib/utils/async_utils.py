@@ -114,4 +114,3 @@ class AsyncContext:
         """
         event_loop = asyncio.new_event_loop()
         return run_given_tasks_async(self._async_tasks, event_loop)
-
