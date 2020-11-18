@@ -21,6 +21,7 @@ from samcli.commands.deploy.utils import sanitize_parameter_overrides
 from samcli.lib.telemetry.metrics import track_command
 from samcli.lib.utils import osutils
 from samcli.lib.bootstrap.bootstrap import manage_stack
+from samcli.lib.utils.version_checker import check_newer_version
 
 SHORT_HELP = "Deploy an AWS SAM application."
 
@@ -146,6 +147,7 @@ LOG = logging.getLogger(__name__)
 @common_options
 @pass_context
 @track_command
+@check_newer_version
 def cli(
     ctx,
     template_file,

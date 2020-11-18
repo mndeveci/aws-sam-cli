@@ -9,7 +9,7 @@ from samcli.cli.main import pass_context, common_options as cli_framework_option
 from samcli.commands.local.cli_common.options import invoke_common_options, service_common_options
 from samcli.lib.telemetry.metrics import track_command
 from samcli.cli.cli_config_file import configuration_option, TomlProvider
-
+from samcli.lib.utils.version_checker import check_newer_version
 
 LOG = logging.getLogger(__name__)
 
@@ -57,6 +57,7 @@ Here is a Python example:
 @aws_creds_options
 @pass_context
 @track_command
+@check_newer_version
 def cli(
     ctx,  # pylint: disable=R0914
     # start-lambda Specific Options

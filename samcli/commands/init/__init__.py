@@ -10,6 +10,7 @@ import click
 
 from samcli.cli.cli_config_file import configuration_option, TomlProvider
 from samcli.cli.main import pass_context, common_options
+from samcli.lib.utils.version_checker import check_newer_version
 from samcli.local.common.runtime_template import RUNTIMES, SUPPORTED_DEP_MANAGERS
 from samcli.lib.telemetry.metrics import track_command
 
@@ -102,6 +103,7 @@ Common usage:
 @common_options
 @pass_context
 @track_command
+@check_newer_version
 def cli(
     ctx,
     no_interactive,
