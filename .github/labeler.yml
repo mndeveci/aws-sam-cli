@@ -1,7 +1,3 @@
-area/package:
-- samcli/commands/package/*
-- samcli/commands/package/**/*
-
 area/local/invoke:
 - samcli/commands/local/invoke/*
 - samcli/commands/local/invoke/**/*
@@ -15,6 +11,8 @@ area/pipeline:
 area/deploy:
 - samcli/commands/deploy/*
 - samcli/commands/deploy/**/*
+- samcli/commands/package/*
+- samcli/commands/package/**/*
 
 area/local/start-api:
 - samcli/commands/local/start-api/*

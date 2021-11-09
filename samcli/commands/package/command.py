@@ -1,5 +1,5 @@
 """
-CLI command for "package" command
+CLI command for "package" command which packages serverless resources
 """
 import click
 
