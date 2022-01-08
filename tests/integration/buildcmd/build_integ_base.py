@@ -28,32 +28,28 @@ class BuildIntegBase(TestCase):
     def setUpClass(cls):
         cls.cmd = cls.base_command()
         integration_dir = Path(__file__).resolve().parents[1]
-        cls.cls_test_data_path = str(Path(integration_dir, "testdata", "buildcmd"))
-        cls.cls_template_path = str(Path(cls.cls_test_data_path, cls.template))
+        cls.test_data_path = str(Path(integration_dir, "testdata", "buildcmd"))
+        cls.template_path = str(Path(cls.test_data_path, cls.template))
 
     def setUp(self):
-        self.test_temp_dir = tempfile.TemporaryDirectory()
         # To invoke a function created by the build command, we need the built artifacts to be in a
         # location that is shared in Docker. Most temp directories are not shared. Therefore we are
         # using a scratch space within the test folder that is .gitignored. Contents of this folder
         # is also deleted after every test run
-        self.scratch_dir = os.path.join(self.test_temp_dir.name, "scratch_dir")
+        self.scratch_dir = str(Path(__file__).resolve().parent.joinpath(str(uuid.uuid4()).replace("-", "")[:10]))
+        shutil.rmtree(self.scratch_dir, ignore_errors=True)
         os.mkdir(self.scratch_dir)
 
-        self.working_dir = os.path.join(self.test_temp_dir.name, "working_dir")
-        os.mkdir(self.working_dir)
-        self.custom_build_dir = os.path.join(self.test_temp_dir.name, "custom_build_dir")
-        os.mkdir(self.custom_build_dir)
+        self.working_dir = tempfile.mkdtemp(dir=self.scratch_dir)
+        self.custom_build_dir = tempfile.mkdtemp(dir=self.scratch_dir)
 
         self.default_build_dir = Path(self.working_dir, ".aws-sam", "build")
         self.built_template = self.default_build_dir.joinpath("template.yaml")
 
-        self.test_data_path = os.path.join(self.test_temp_dir.name, "testdata")
-        shutil.copytree(self.cls_test_data_path, self.test_data_path, symlinks=True)
-        self.template_path = os.path.join(self.test_data_path, self.template)
-
     def tearDown(self):
-        self.test_temp_dir.cleanup()
+        self.custom_build_dir and shutil.rmtree(self.custom_build_dir, ignore_errors=True)
+        self.working_dir and shutil.rmtree(self.working_dir, ignore_errors=True)
+        self.scratch_dir and shutil.rmtree(self.scratch_dir, ignore_errors=True)
 
     @classmethod
     def base_command(cls):
