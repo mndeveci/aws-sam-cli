@@ -26,10 +26,11 @@ SKIP_DOCKER_MESSAGE = "Skipped Docker test: running on CI not in canary or new b
 LOG = logging.getLogger(__name__)
 
 CommandResult = namedtuple("CommandResult", "process stdout stderr")
-TIMEOUT = 600
+TIMEOUT = 800
 
 
 def run_command(command_list, cwd=None, env=None, timeout=TIMEOUT) -> CommandResult:
+    LOG.info("Running command: %s", " ".join(command_list))
     process_execute = Popen(command_list, cwd=cwd, env=env, stdout=PIPE, stderr=PIPE)
     try:
         stdout_data, stderr_data = process_execute.communicate(timeout=timeout)

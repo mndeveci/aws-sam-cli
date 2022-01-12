@@ -1,6 +1,7 @@
 import os
 import subprocess
 import tempfile
+import uuid
 
 from parameterized import parameterized
 from unittest import TestCase
@@ -31,7 +32,7 @@ class TestAllCommands(TestCase):
                 "--template-file",
                 os.path.join(TEMPLATE_FOLDER, template_file_name),
                 "--s3-bucket",
-                "sdfafds-random-bucket",
+                f"test-smoke-package-{uuid.uuid4().hex}",
             ],
         )
 
@@ -43,7 +44,7 @@ class TestAllCommands(TestCase):
                 "--template-file",
                 os.path.join(TEMPLATE_FOLDER, template_file_name),
                 "--stack-name",
-                "dsfafs-random-stack",
+                f"test-smoke-deploy-{uuid.uuid4().hex}",
             ],
         )
 
