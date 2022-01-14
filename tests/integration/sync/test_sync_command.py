@@ -61,7 +61,7 @@ class TestSync(BuildIntegBase, PackageIntegBase, SyncIntegBase):
         super().setUp()
 
     def tearDown(self):
-        shutil.rmtree(os.path.join(os.getcwd(), ".aws-sam", "build"), ignore_errors=True)
+        shutil.rmtree(os.path.join(os.getcwd(), ".aws-sam"), ignore_errors=True)
         for stack in self.stacks:
             # because of the termination protection, do not delete aws-sam-cli-managed-default stack
             stack_name = stack["name"]
