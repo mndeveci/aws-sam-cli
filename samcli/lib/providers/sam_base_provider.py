@@ -292,8 +292,6 @@ class SamBaseProvider:
 
         default_values: Dict = {}
 
-        LOG.info("Getting Parameters from template:")
-        LOG.info(sam_template)
         parameter_definition = sam_template.get("Parameters", None)
         if not parameter_definition or not isinstance(parameter_definition, dict):
             LOG.debug("No Parameters detected in the template")
