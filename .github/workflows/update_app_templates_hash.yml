@@ -21,7 +21,7 @@ jobs:
       - name: Checkout SAM CLI
         uses: actions/checkout@v3
         with:
-          repository: aws/aws-sam-cli
+          repository: mndeveci/aws-sam-cli
           path: aws-sam-cli
 
       - name: Update commit hash in SAM CLI from App Templates
