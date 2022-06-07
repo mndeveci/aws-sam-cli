@@ -5,7 +5,10 @@ from unittest.mock import patch, Mock, ANY, call
 from parameterized import parameterized
 
 from samcli.commands._utils.experimental import ExperimentalFlag
+from samcli.commands.local.cli_common.user_exceptions import InvalidFunctionPropertyType
 from samcli.lib.build.build_graph import DEFAULT_DEPENDENCIES_DIR
+from samcli.lib.providers.provider import Function, ResourcesToBuildCollector
+from samcli.lib.utils.architecture import X86_64, ARM64
 from samcli.lib.utils.osutils import BUILD_DIR_PERMISSIONS
 from samcli.lib.utils.packagetype import ZIP, IMAGE
 from samcli.local.lambdafn.exceptions import ResourceNotFound
@@ -21,6 +24,7 @@ from samcli.lib.build.app_builder import (
 )
 from samcli.lib.build.workflow_config import UnsupportedRuntimeException
 from samcli.local.lambdafn.exceptions import FunctionNotFound
+from tests.unit.lib.build_module.test_build_graph import generate_function, generate_layer
 
 
 class DeepWrap(Exception):
@@ -28,12 +32,22 @@ class DeepWrap(Exception):
 
 
 class DummyLayer:
-    def __init__(self, name, build_method, codeuri="layer_src", skip_build=False):
+    def __init__(
+        self,
+        name,
+        build_method,
+        codeuri="layer_src",
+        skip_build=False,
+        compatible_runtimes=[],
+        build_architecture=X86_64,
+    ):
         self.name = name
         self.build_method = build_method
         self.codeuri = codeuri
         self.full_path = Mock()
         self.skip_build = skip_build
+        self.compatible_runtimes = compatible_runtimes
+        self.build_architecture = build_architecture
 
 
 class DummyFunction:
@@ -47,18 +61,22 @@ class DummyFunction:
         packagetype=ZIP,
         metadata=None,
         skip_build=False,
-        runtime=None,
+        runtime="runtime",
+        architecture=X86_64,
+        handler="handler",
     ):
         self.name = name
         self.layers = layers
         self.inlinecode = inlinecode
         self.codeuri = codeuri
         self.imageuri = imageuri
-        self.full_path = Mock()
+        self.full_path = "full_path"
         self.packagetype = packagetype
         self.metadata = metadata if metadata else {}
         self.skip_build = skip_build
         self.runtime = runtime
+        self.architecture = architecture
+        self.handler = handler
 
 
 class TestBuildContext__enter__(TestCase):
@@ -143,7 +161,7 @@ class TestBuildContext__enter__(TestCase):
         pathlib_mock.Path.assert_called_once_with("template_file")
         setup_build_dir_mock.assert_called_with("build_dir", True)
         ContainerManagerMock.assert_called_once_with(docker_network_id="network", skip_pull_image=True)
-        func_provider_mock.get.assert_called_once_with("function_identifier")
+        func_provider_mock.get.assert_has_calls([call("function_identifier"), call("function_identifier")])
 
     @patch("samcli.commands.build.build_context.get_template_data")
     @patch("samcli.commands.build.build_context.SamLocalStackProvider.get_stacks")
@@ -197,9 +215,9 @@ class TestBuildContext__enter__(TestCase):
         build_dir_result = setup_build_dir_mock.return_value = "my/new/build/dir"
         context._setup_build_dir = setup_build_dir_mock
 
-        # call the enter method
-        result = context.__enter__()
         with self.assertRaises(ResourceNotFound):
+            # call the enter method
+            result = context.__enter__()
             context.resources_to_build
 
     @patch("samcli.commands.build.build_context.get_template_data")
@@ -369,11 +387,11 @@ class TestBuildContext__enter__(TestCase):
         build_dir_result = setup_build_dir_mock.return_value = "my/new/build/dir"
         context._setup_build_dir = setup_build_dir_mock
 
-        # call the enter method
-        result = context.__enter__()
         with self.assertRaises(MissingBuildMethodException):
+            result = context.__enter__()
             context.resources_to_build
 
+    @patch("samcli.lib.build.build_graph.BuildGraph._write")
     @patch("samcli.commands.build.build_context.get_template_data")
     @patch("samcli.commands.build.build_context.SamLocalStackProvider.get_stacks")
     @patch("samcli.commands.build.build_context.SamFunctionProvider")
@@ -388,6 +406,7 @@ class TestBuildContext__enter__(TestCase):
         SamFunctionProviderMock,
         get_buildable_stacks_mock,
         get_template_data_mock,
+        build_graph_write_mock,
     ):
         """
         In this unit test, we also verify
@@ -478,7 +497,7 @@ class TestBuildContext__enter__(TestCase):
         pathlib_mock.Path.assert_called_once_with("template_file")
         setup_build_dir_mock.assert_called_with("build_dir", True)
         ContainerManagerMock.assert_called_once_with(docker_network_id="network", skip_pull_image=True)
-        func_provider_mock.get_all.assert_called_once()
+        func_provider_mock.get_all.assert_has_calls([call(), call()])
 
     @parameterized.expand(
         [
@@ -492,6 +511,7 @@ class TestBuildContext__enter__(TestCase):
             (["func1", "func2"], ("func2",), "func1"),
         ]
     )
+    @patch("samcli.lib.build.build_graph.BuildGraph._write")
     @patch("samcli.commands.build.build_context.get_template_data")
     @patch("samcli.commands.build.build_context.SamLocalStackProvider.get_stacks")
     @patch("samcli.commands.build.build_context.SamFunctionProvider")
@@ -509,6 +529,7 @@ class TestBuildContext__enter__(TestCase):
         SamFunctionProviderMock,
         get_buildable_stacks_mock,
         get_template_data_mock,
+        build_graph_write_mock,
     ):
         template_dict = "template dict"
         stack = Mock()
@@ -612,7 +633,9 @@ class TestBuildContext__enter__(TestCase):
             cache_dir="cache_dir",
             parallel=True,
         )
-        context._setup_build_dir = Mock()
+        setup_build_dir_mock = Mock()
+        setup_build_dir_mock.return_value = "build_dir"
+        context._setup_build_dir = setup_build_dir_mock
 
         # call the enter method
         context.__enter__()
@@ -661,7 +684,6 @@ class TestBuildContext__enter__(TestCase):
             root_stack.stack_path: "./build_dir/template.yaml",
             child_stack.stack_path: "./build_dir/abcd/template.yaml",
         }
-        resources_mock.return_value = Mock()
 
         builder_mock = ApplicationBuilderMock.return_value = Mock()
         artifacts = "artifacts"
@@ -682,6 +704,7 @@ class TestBuildContext__enter__(TestCase):
         base_dir = pathlib_mock.Path.return_value.resolve.return_value.parent = "basedir"
         container_mgr_mock = ContainerManagerMock.return_value = Mock()
         build_dir_mock.return_value = "build_dir"
+        resources_mock.return_value = Mock(functions=[func1], layers=[layer1])
 
         with BuildContext(
             resource_identifier="function_identifier",
@@ -708,6 +731,83 @@ class TestBuildContext__enter__(TestCase):
                 with patch("samcli.commands.build.build_context.BuildContext._check_esbuild_warning"):
                     build_context.run()
                     mock_message.assert_not_called()
+
+    @patch("samcli.commands.build.build_context.SamLocalStackProvider")
+    @patch("samcli.commands.build.build_context.SamFunctionProvider")
+    @patch("samcli.commands.build.build_context.SamLayerProvider")
+    @patch("samcli.commands.build.build_context.BuildContext._setup_build_dir")
+    @patch("samcli.commands.build.build_context.BuildContext.get_resources_to_build")
+    @patch("samcli.lib.build.build_graph.BuildGraph._write")
+    def test_must_raise_for_functions_with_multi_architecture(
+        self,
+        build_graph_write_mock,
+        get_resources_to_build_mock,
+        setup_build_dir_mock,
+        sam_layer_provider,
+        sam_function_provider,
+        sam_local_stack_provider_mock,
+    ):
+        sam_local_stack_provider_mock.get_stacks.return_value = (Mock(), None)
+        function = Function(
+            function_id="name",
+            name="name",
+            functionname="function_name",
+            runtime="runtime",
+            memory="memory",
+            timeout="timeout",
+            handler="handler",
+            imageuri="imageuri",
+            packagetype=ZIP,
+            imageconfig="imageconfig",
+            codeuri="codeuri",
+            environment="environment",
+            rolearn="rolearn",
+            layers="layers",
+            events="events",
+            codesign_config_arn="codesign_config_arn",
+            metadata=None,
+            inlinecode=None,
+            architectures=[X86_64, ARM64],
+            stack_path="",
+            function_url_config=None,
+        )
+        get_resources_to_build_mock.return_value = Mock(functions=[function], layers=[])
+
+        with self.assertRaises(InvalidFunctionPropertyType):
+            with BuildContext(None, "template.yaml", None, None, None, False, False, None) as build_context:
+                pass
+
+
+class TestBuildContext_build_graph(TestCase):
+    @patch("samcli.lib.build.build_graph.BuildGraph._write")
+    @patch("samcli.commands.build.build_context.SamLocalStackProvider")
+    @patch("samcli.commands.build.build_context.SamFunctionProvider")
+    @patch("samcli.commands.build.build_context.SamLayerProvider")
+    @patch("samcli.commands.build.build_context.BuildContext._setup_build_dir")
+    @patch("samcli.commands.build.build_context.BuildContext.get_resources_to_build")
+    def test_should_generate_build_graph(
+        self,
+        get_resources_to_build_mock,
+        setup_build_dir_mock,
+        sam_layer_provider_mock,
+        sam_function_provider_mock,
+        sam_local_stack_provider_mock,
+        persist_mock,
+    ):
+        sam_local_stack_provider_mock.get_stacks.return_value = (Mock(), None)
+        get_resources_to_build_mock.return_value = Mock(
+            functions=[
+                generate_function("function1"),
+                generate_function("function2"),
+                generate_function("function3", runtime="runtime1"),
+            ],
+            layers=[generate_layer("layer1"), generate_layer("layer2")],
+        )
+
+        with BuildContext(None, "template.yml", None, None, None, False, False, None) as build_context:
+            self.assertIsNotNone(build_context.build_graph)
+            self.assertEqual(len(build_context.build_graph.get_function_build_definitions()), 2)
+            self.assertEqual(len(build_context.build_graph.get_layer_build_definitions()), 2)
 
 
 class TestBuildContext_setup_build_dir(TestCase):
@@ -839,8 +939,9 @@ class TestBuildContext_setup_cached_and_deps_dir(TestCase):
     @patch("samcli.commands.build.build_context.SamLocalStackProvider")
     @patch("samcli.commands.build.build_context.SamFunctionProvider")
     @patch("samcli.commands.build.build_context.SamLayerProvider")
+    @patch("samcli.commands.build.build_context.BuildGraph")
     def test_cached_dir_and_deps_dir_creation(
-        self, cached, patched_layer, patched_function, patched_stack, patched_path
+        self, cached, patched_build_graph, patched_layer, patched_function, patched_stack, patched_path
     ):
         patched_stack.get_stacks.return_value = ([], None)
         build_context = BuildContext(
@@ -970,6 +1071,7 @@ class TestBuildContext_run(TestCase):
 
             ApplicationBuilderMock.assert_called_once_with(
                 ANY,
+                build_context.build_graph,
                 build_context.build_dir,
                 build_context.base_dir,
                 build_context.cache_dir,
@@ -979,8 +1081,6 @@ class TestBuildContext_run(TestCase):
                 container_manager=build_context.container_manager,
                 mode=build_context.mode,
                 parallel=build_context._parallel,
-                container_env_var=build_context._container_env_var,
-                container_env_var_file=build_context._container_env_var_file,
                 build_images=build_context._build_images,
                 combine_dependencies=not auto_dependency_layer,
             )
@@ -1154,7 +1254,7 @@ class TestBuildContext_run(TestCase):
         get_buildable_stacks_mock,
     ):
         stack = Mock()
-        resources_mock.return_value = Mock()
+        resources_mock.return_value = Mock(functions=[], layers=[])
 
         builder_mock = ApplicationBuilderMock.return_value = Mock()
         artifacts = builder_mock.build.return_value = "artifacts"
@@ -1261,3 +1361,63 @@ class TestBuildContext_exclude_warning(TestCase):
             log_mock.warning.assert_called_once_with(BuildContext._EXCLUDE_WARNING_MESSAGE)
         else:
             log_mock.warning.assert_not_called()
+
+
+class TestApplicationBuilder_make_env_vars(TestCase):
+    def setUp(self) -> None:
+        self._build_context = BuildContext(None, "template_file", None, "build_dir", "cache_dir", False, False, None)
+
+    def test_make_env_vars_with_env_file(self):
+        function1 = generate_function(name="Function1")
+        file_env_vars = {
+            "Parameters": {"ENV_VAR1": "1"},
+            "Function1": {"ENV_VAR2": "2"},
+            "Function2": {"ENV_VAR3": "3"},
+        }
+        with patch.object(self._build_context, "_get_file_env_vars") as patched_file_env_vars:
+            patched_file_env_vars.return_value = file_env_vars
+            result = self._build_context._make_env_vars(
+                function1,
+            )
+            self.assertEqual(result, {"ENV_VAR1": "1", "ENV_VAR2": "2"})
+
+    def test_make_env_vars_with_function_precedence(self):
+        function1 = generate_function(name="Function1")
+        file_env_vars = {
+            "Parameters": {"ENV_VAR1": "1"},
+            "Function1": {"ENV_VAR1": "2"},
+            "Function2": {"ENV_VAR3": "3"},
+        }
+        with patch.object(self._build_context, "_get_file_env_vars") as patched_file_env_vars:
+            patched_file_env_vars.return_value = file_env_vars
+            result = self._build_context._make_env_vars(function1)
+            self.assertEqual(result, {"ENV_VAR1": "2"})
+
+    def test_make_env_vars_with_inline_env(self):
+        function1 = generate_function(name="Function1")
+        self._build_context._container_env_var = {
+            "Parameters": {"ENV_VAR1": "1"},
+            "Function1": {"ENV_VAR2": "2"},
+            "Function2": {"ENV_VAR3": "3"},
+        }
+        with patch.object(self._build_context, "_get_file_env_vars") as patched_file_env_vars:
+            patched_file_env_vars.return_value = {}
+            result = self._build_context._make_env_vars(function1)
+            self.assertEqual(result, {"ENV_VAR1": "1", "ENV_VAR2": "2"})
+
+    def test_make_env_vars_with_both(self):
+        function1 = generate_function(name="Function1")
+        file_env_vars = {
+            "Parameters": {"ENV_VAR1": "1"},
+            "Function1": {"ENV_VAR2": "2"},
+            "Function2": {"ENV_VAR3": "3"},
+        }
+        self._build_context._container_env_var = {
+            "Parameters": {"ENV_VAR1": "2"},
+            "Function1": {"ENV_VAR2": "3"},
+            "Function2": {"ENV_VAR3": "3"},
+        }
+        with patch.object(self._build_context, "_get_file_env_vars") as patched_file_env_vars:
+            patched_file_env_vars.return_value = file_env_vars
+            result = self._build_context._make_env_vars(function1)
+            self.assertEqual(result, {"ENV_VAR1": "2", "ENV_VAR2": "3"})

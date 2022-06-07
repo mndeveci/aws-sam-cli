@@ -85,6 +85,7 @@ class TestLayerSyncFlow(TestCase):
 
         patched_app_builder.assert_called_with(
             given_collect_build_resources,
+            self.build_context_mock.build_graph,
             self.build_context_mock.build_dir,
             self.build_context_mock.base_dir,
             self.build_context_mock.cache_dir,

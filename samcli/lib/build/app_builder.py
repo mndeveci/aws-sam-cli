@@ -1,49 +1,29 @@
 """
 Builds the application
 """
-import os
 import io
 import json
 import logging
+import os
 import pathlib
-from typing import List, Optional, Dict, cast, Union, NamedTuple, Set
+from typing import List, Optional, Dict, cast, NamedTuple, Set
 
 import docker
 import docker.errors
 from aws_lambda_builders import (
     RPC_PROTOCOL_VERSION as lambda_builders_protocol_version,
-    __version__ as lambda_builders_version,
 )
 from aws_lambda_builders.builder import LambdaBuilder
 from aws_lambda_builders.exceptions import LambdaBuilderError
 
-from samcli.commands.local.lib.exceptions import OverridesNotWellDefinedError
-from samcli.lib.build.build_graph import FunctionBuildDefinition, LayerBuildDefinition, BuildGraph
+from samcli.commands._utils.experimental import get_enabled_experimental_flags
+from samcli.lib.build.build_graph import BuildGraph
 from samcli.lib.build.build_strategy import (
     DefaultBuildStrategy,
     CachedOrIncrementalBuildStrategyWrapper,
     ParallelBuildStrategy,
     BuildStrategy,
 )
-from samcli.lib.utils.resources import (
-    AWS_CLOUDFORMATION_STACK,
-    AWS_LAMBDA_FUNCTION,
-    AWS_LAMBDA_LAYERVERSION,
-    AWS_SERVERLESS_APPLICATION,
-    AWS_SERVERLESS_FUNCTION,
-    AWS_SERVERLESS_LAYERVERSION,
-)
-from samcli.lib.samlib.resource_metadata_normalizer import ResourceMetadataNormalizer
-from samcli.lib.docker.log_streamer import LogStreamer, LogStreamError
-from samcli.lib.providers.provider import ResourcesToBuildCollector, Function, get_full_path, Stack, LayerVersion
-from samcli.lib.utils.colors import Colored
-from samcli.lib.utils import osutils
-from samcli.lib.utils.packagetype import IMAGE, ZIP
-from samcli.lib.utils.stream_writer import StreamWriter
-from samcli.local.docker.lambda_build_container import LambdaBuildContainer
-from samcli.local.docker.utils import is_docker_reachable, get_docker_platform
-from samcli.local.docker.manager import ContainerManager
-from samcli.commands._utils.experimental import get_enabled_experimental_flags
 from samcli.lib.build.exceptions import (
     DockerConnectionError,
     DockerfileOutSideOfContext,
@@ -53,7 +33,6 @@ from samcli.lib.build.exceptions import (
     ContainerBuildNotSupported,
     UnsupportedBuilderLibraryVersionError,
 )
-
 from samcli.lib.build.workflow_config import (
     get_workflow_config,
     get_layer_subfolder,
@@ -61,6 +40,24 @@ from samcli.lib.build.workflow_config import (
     CONFIG,
     UnsupportedRuntimeException,
 )
+from samcli.lib.docker.log_streamer import LogStreamer, LogStreamError
+from samcli.lib.providers.provider import ResourcesToBuildCollector, get_full_path, Stack
+from samcli.lib.samlib.resource_metadata_normalizer import ResourceMetadataNormalizer
+from samcli.lib.utils import osutils
+from samcli.lib.utils.colors import Colored
+from samcli.lib.utils.packagetype import IMAGE, ZIP
+from samcli.lib.utils.resources import (
+    AWS_CLOUDFORMATION_STACK,
+    AWS_LAMBDA_FUNCTION,
+    AWS_LAMBDA_LAYERVERSION,
+    AWS_SERVERLESS_APPLICATION,
+    AWS_SERVERLESS_FUNCTION,
+    AWS_SERVERLESS_LAYERVERSION,
+)
+from samcli.lib.utils.stream_writer import StreamWriter
+from samcli.local.docker.lambda_build_container import LambdaBuildContainer
+from samcli.local.docker.manager import ContainerManager
+from samcli.local.docker.utils import is_docker_reachable, get_docker_platform
 
 LOG = logging.getLogger(__name__)
 
@@ -96,6 +93,7 @@ class ApplicationBuilder:
     def __init__(
         self,
         resources_to_build: ResourcesToBuildCollector,
+        build_graph: BuildGraph,
         build_dir: str,
         base_dir: str,
         cache_dir: str,
@@ -107,8 +105,6 @@ class ApplicationBuilder:
         mode: Optional[str] = None,
         stream_writer: Optional[StreamWriter] = None,
         docker_client: Optional[docker.DockerClient] = None,
-        container_env_var: Optional[Dict] = None,
-        container_env_var_file: Optional[str] = None,
         build_images: Optional[Dict] = None,
         combine_dependencies: bool = True,
     ) -> None:
@@ -154,6 +150,7 @@ class ApplicationBuilder:
             dependencies or not.
         """
         self._resources_to_build = resources_to_build
+        self._build_graph = build_graph
         self._build_dir = build_dir
         self._base_dir = base_dir
         self._cache_dir = cache_dir
@@ -169,8 +166,6 @@ class ApplicationBuilder:
 
         self._deprecated_runtimes = DEPRECATED_RUNTIMES
         self._colored = Colored()
-        self._container_env_var = container_env_var
-        self._container_env_var_file = container_env_var_file
         self._build_images = build_images or {}
         self._combine_dependencies = combine_dependencies
 
@@ -184,17 +179,16 @@ class ApplicationBuilder:
             Returns the build graph and the path to where each resource was built as a map of resource's LogicalId
             to the path string
         """
-        build_graph = self._get_build_graph(self._container_env_var, self._container_env_var_file)
         build_strategy: BuildStrategy = DefaultBuildStrategy(
-            build_graph, self._build_dir, self._build_function, self._build_layer
+            self._build_graph, self._build_dir, self._build_function, self._build_layer
         )
 
         if self._parallel:
             if self._cached:
                 build_strategy = ParallelBuildStrategy(
-                    build_graph,
+                    self._build_graph,
                     CachedOrIncrementalBuildStrategyWrapper(
-                        build_graph,
+                        self._build_graph,
                         build_strategy,
                         self._base_dir,
                         self._build_dir,
@@ -204,10 +198,10 @@ class ApplicationBuilder:
                     ),
                 )
             else:
-                build_strategy = ParallelBuildStrategy(build_graph, build_strategy)
+                build_strategy = ParallelBuildStrategy(self._build_graph, build_strategy)
         elif self._cached:
             build_strategy = CachedOrIncrementalBuildStrategyWrapper(
-                build_graph,
+                self._build_graph,
                 build_strategy,
                 self._base_dir,
                 self._build_dir,
@@ -216,57 +210,7 @@ class ApplicationBuilder:
                 self._is_building_specific_resource,
             )
 
-        return ApplicationBuildResult(build_graph, build_strategy.build())
-
-    def _get_build_graph(
-        self, inline_env_vars: Optional[Dict] = None, env_vars_file: Optional[str] = None
-    ) -> BuildGraph:
-        """
-        Converts list of functions and layers into a build graph, where we can iterate on each unique build and trigger
-        build
-        :return: BuildGraph, which represents list of unique build definitions
-        """
-        build_graph = BuildGraph(self._build_dir)
-        functions = self._resources_to_build.functions
-        layers = self._resources_to_build.layers
-        file_env_vars = {}
-        if env_vars_file:
-            try:
-                with open(env_vars_file, "r", encoding="utf-8") as fp:
-                    file_env_vars = json.load(fp)
-            except Exception as ex:
-                raise IOError(
-                    "Could not read environment variables overrides from file {}: {}".format(env_vars_file, str(ex))
-                ) from ex
-
-        for function in functions:
-            container_env_vars = self._make_env_vars(function, file_env_vars, inline_env_vars)
-            function_build_details = FunctionBuildDefinition(
-                function.runtime,
-                function.codeuri,
-                function.packagetype,
-                function.architecture,
-                function.metadata,
-                function.handler,
-                env_vars=container_env_vars,
-            )
-            build_graph.put_function_build_definition(function_build_details, function)
-
-        for layer in layers:
-            container_env_vars = self._make_env_vars(layer, file_env_vars, inline_env_vars)
-
-            layer_build_details = LayerBuildDefinition(
-                layer.full_path,
-                layer.codeuri,
-                layer.build_method,
-                layer.compatible_runtimes,
-                layer.build_architecture,
-                env_vars=container_env_vars,
-            )
-            build_graph.put_layer_build_definition(layer_build_details, layer)
-
-        build_graph.clean_redundant_definitions_and_update(not self._is_building_specific_resource)
-        return build_graph
+        return ApplicationBuildResult(self._build_graph, build_strategy.build())
 
     @staticmethod
     def update_template(
@@ -884,65 +828,3 @@ class ApplicationBuilder:
             raise ValueError(msg)
 
         return cast(Dict, response)
-
-    @staticmethod
-    def _make_env_vars(
-        resource: Union[Function, LayerVersion], file_env_vars: Dict, inline_env_vars: Optional[Dict]
-    ) -> Dict:
-        """Returns the environment variables configuration for this function
-
-        Priority order (high to low):
-        1. Function specific env vars from command line
-        2. Function specific env vars from json file
-        3. Global env vars from command line
-        4. Global env vars from json file
-
-        Parameters
-        ----------
-        resource : Union[Function, LayerVersion]
-            Lambda function or layer to generate the configuration for
-        file_env_vars : Dict
-            The dictionary of environment variables loaded from the file
-        inline_env_vars : Optional[Dict]
-            The optional dictionary of environment variables defined inline
-
-
-        Returns
-        -------
-        dictionary
-            Environment variable configuration for this function
-
-        Raises
-        ------
-        samcli.commands.local.lib.exceptions.OverridesNotWellDefinedError
-            If the environment dict is in the wrong format to process environment vars
-
-        """
-
-        name = resource.name
-        result = {}
-
-        # validate and raise OverridesNotWellDefinedError
-        for env_var in list((file_env_vars or {}).values()) + list((inline_env_vars or {}).values()):
-            if not isinstance(env_var, dict):
-                reason = "Environment variables {} in incorrect format".format(env_var)
-                LOG.debug(reason)
-                raise OverridesNotWellDefinedError(reason)
-
-        if file_env_vars:
-            parameter_result = file_env_vars.get("Parameters", {})
-            result.update(parameter_result)
-
-        if inline_env_vars:
-            inline_parameter_result = inline_env_vars.get("Parameters", {})
-            result.update(inline_parameter_result)
-
-        if file_env_vars:
-            specific_result = file_env_vars.get(name, {})
-            result.update(specific_result)
-
-        if inline_env_vars:
-            inline_specific_result = inline_env_vars.get(name, {})
-            result.update(inline_specific_result)
-
-        return result

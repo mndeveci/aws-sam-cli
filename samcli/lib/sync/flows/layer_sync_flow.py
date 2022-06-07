@@ -207,6 +207,7 @@ class LayerSyncFlow(AbstractLayerSyncFlow):
         with self._get_lock_chain():
             builder = ApplicationBuilder(
                 self._build_context.collect_build_resources(self._layer_identifier),
+                self._build_context.build_graph,
                 self._build_context.build_dir,
                 self._build_context.base_dir,
                 self._build_context.cache_dir,

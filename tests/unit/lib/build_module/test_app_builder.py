@@ -11,6 +11,7 @@ from pathlib import Path, WindowsPath
 
 from parameterized import parameterized
 
+from samcli.lib.build.build_graph import BuildGraph, FunctionBuildDefinition, LayerBuildDefinition
 from samcli.lib.build.workflow_config import UnsupportedRuntimeException
 from samcli.lib.providers.provider import ResourcesToBuildCollector, Function
 from samcli.lib.build.app_builder import (
@@ -29,6 +30,29 @@ from samcli.lib.utils.architecture import X86_64, ARM64
 from samcli.lib.utils.packagetype import IMAGE, ZIP
 from samcli.lib.utils.stream_writer import StreamWriter
 from tests.unit.lib.build_module.test_build_graph import generate_function
+
+
+def get_function_build_definition(function):
+    function_build_definition = FunctionBuildDefinition(
+        function.runtime,
+        function.codeuri,
+        function.packagetype,
+        function.architecture,
+        function.metadata,
+        function.handler,
+    )
+    function_build_definition.add_function(function)
+
+    return function_build_definition
+
+
+def get_layer_build_definition(layer):
+    layer_build_definition = LayerBuildDefinition(
+        layer.full_path, layer.codeuri, layer.packagetype, layer.build_method, layer.build_architecture
+    )
+    layer_build_definition.layer = layer
+
+    return layer_build_definition
 
 
 class TestApplicationBuilder_build(TestCase):
@@ -74,12 +98,26 @@ class TestApplicationBuilder_build(TestCase):
         resources_to_build_collector = ResourcesToBuildCollector()
         resources_to_build_collector.add_functions([self.func1, self.func2, self.imageFunc1])
         resources_to_build_collector.add_layers([self.layer1, self.layer2])
+
+        build_graph = Mock()
+
+        build_graph.get_function_build_definitions.return_value = [
+            get_function_build_definition(function) for function in [self.func1, self.func2, self.imageFunc1]
+        ]
+        build_graph.get_layer_build_definitions.return_value = [
+            get_layer_build_definition(layer) for layer in (self.layer1, self.layer2)
+        ]
+
         self.builder = ApplicationBuilder(
-            resources_to_build_collector, "builddir", "basedir", "cachedir", stream_writer=StreamWriter(sys.stderr)
+            resources_to_build_collector,
+            build_graph,
+            "builddir",
+            "basedir",
+            "cachedir",
+            stream_writer=StreamWriter(sys.stderr),
         )
 
-    @patch("samcli.lib.build.build_graph.BuildGraph._write")
-    def test_must_iterate_on_functions_and_layers(self, persist_mock):
+    def test_must_iterate_on_functions_and_layers(self):
         build_function_mock = Mock()
         build_image_function_mock = Mock()
         build_image_function_mock_return = Mock()
@@ -235,20 +273,6 @@ class TestApplicationBuilder_build(TestCase):
         )
 
     @patch("samcli.lib.build.build_graph.BuildGraph._write")
-    def test_should_generate_build_graph(self, persist_mock):
-        build_graph = self.builder._get_build_graph()
-
-        self.assertTrue(len(build_graph.get_function_build_definitions()), 2)
-
-        all_functions_in_build_graph = []
-        for build_definition in build_graph.get_function_build_definitions():
-            for function in build_definition.functions:
-                all_functions_in_build_graph.append(function)
-
-        self.assertTrue(self.func1 in all_functions_in_build_graph)
-        self.assertTrue(self.func2 in all_functions_in_build_graph)
-
-    @patch("samcli.lib.build.build_graph.BuildGraph._write")
     @patch("samcli.lib.build.build_graph.BuildGraph._read")
     @patch("samcli.lib.build.build_strategy.osutils")
     def test_should_run_build_for_only_unique_builds(self, persist_mock, read_mock, osutils_mock):
@@ -262,10 +286,26 @@ class TestApplicationBuilder_build(TestCase):
         resources_to_build_collector.add_functions([function1_1, function1_2, function2])
 
         build_dir = "builddir"
+        build_graph = BuildGraph("build_dir")
+        for function in resources_to_build_collector.functions:
+            build_definition = FunctionBuildDefinition(
+                function.runtime,
+                function.codeuri,
+                function.packagetype,
+                function.architecture,
+                function.metadata,
+                function.handler,
+            )
+            build_graph.put_function_build_definition(build_definition, function)
 
         # instantiate the builder and run build method
         builder = ApplicationBuilder(
-            resources_to_build_collector, "builddir", "basedir", "cachedir", stream_writer=StreamWriter(sys.stderr)
+            resources_to_build_collector,
+            build_graph,
+            "builddir",
+            "basedir",
+            "cachedir",
+            stream_writer=StreamWriter(sys.stderr),
         )
         builder._build_function = build_function_mock
         build_function_mock.side_effect = [
@@ -328,7 +368,7 @@ class TestApplicationBuilder_build(TestCase):
         get_build_graph_mock = Mock(return_value=build_graph_mock)
 
         builder = ApplicationBuilder(
-            MagicMock(), "builddir", "basedir", "cachedir", stream_writer=StreamWriter(sys.stderr)
+            MagicMock(), Mock(), "builddir", "basedir", "cachedir", stream_writer=StreamWriter(sys.stderr)
         )
         builder._get_build_graph = get_build_graph_mock
 
@@ -349,7 +389,7 @@ class TestApplicationBuilder_build(TestCase):
         get_build_graph_mock = Mock(return_value=build_graph_mock)
 
         builder = ApplicationBuilder(
-            MagicMock(), "builddir", "basedir", "cachedir", cached=True, stream_writer=StreamWriter(sys.stderr)
+            MagicMock(), Mock(), "builddir", "basedir", "cachedir", cached=True, stream_writer=StreamWriter(sys.stderr)
         )
         builder._get_build_graph = get_build_graph_mock
 
@@ -367,7 +407,13 @@ class TestApplicationBuilder_build(TestCase):
         get_build_graph_mock = Mock(return_value=build_graph_mock)
 
         builder = ApplicationBuilder(
-            MagicMock(), "builddir", "basedir", "cachedir", parallel=True, stream_writer=StreamWriter(sys.stderr)
+            MagicMock(),
+            Mock(),
+            "builddir",
+            "basedir",
+            "cachedir",
+            parallel=True,
+            stream_writer=StreamWriter(sys.stderr),
         )
         builder._get_build_graph = get_build_graph_mock
 
@@ -393,6 +439,7 @@ class TestApplicationBuilder_build(TestCase):
 
         builder = ApplicationBuilder(
             MagicMock(),
+            Mock(),
             "builddir",
             "basedir",
             "cachedir",
@@ -408,53 +455,6 @@ class TestApplicationBuilder_build(TestCase):
 
         mock_parallel_build_strategy.build.assert_called_once()
         self.assertEqual(result, mock_parallel_build_strategy.build())
-
-    @patch("samcli.lib.build.build_graph.BuildGraph._write")
-    @patch("samcli.lib.build.build_graph.BuildGraph._read")
-    @patch("samcli.lib.build.build_strategy.osutils")
-    def test_must_raise_for_functions_with_multi_architecture(self, persist_mock, read_mock, osutils_mock):
-        build_function_mock = Mock()
-
-        function = Function(
-            function_id="name",
-            name="name",
-            functionname="function_name",
-            runtime="runtime",
-            memory="memory",
-            timeout="timeout",
-            handler="handler",
-            imageuri="imageuri",
-            packagetype=ZIP,
-            imageconfig="imageconfig",
-            codeuri="codeuri",
-            environment="environment",
-            rolearn="rolearn",
-            layers="layers",
-            events="events",
-            codesign_config_arn="codesign_config_arn",
-            metadata=None,
-            inlinecode=None,
-            architectures=[X86_64, ARM64],
-            stack_path="",
-            function_url_config=None,
-        )
-
-        resources_to_build_collector = ResourcesToBuildCollector()
-        resources_to_build_collector.add_functions([function])
-
-        build_dir = "builddir"
-
-        # instantiate the builder and run build method
-        builder = ApplicationBuilder(
-            resources_to_build_collector, "builddir", "basedir", "cachedir", stream_writer=StreamWriter(sys.stderr)
-        )
-        builder._build_function = build_function_mock
-        build_function_mock.side_effect = [function.get_build_dir(build_dir)]
-
-        with self.assertRaises(InvalidFunctionPropertyType) as ex:
-            builder.build()
-        msg = "Function name property Architectures should be a list of length 1"
-        self.assertEqual(str(ex.exception), msg)
 
     @parameterized.expand([("python2.7",), ("ruby2.5",), ("nodejs10.x",), ("dotnetcore2.1",)])
     def test_deprecated_runtimes(self, runtime):
@@ -486,7 +486,12 @@ class TestApplicationBuilderForLayerBuild(TestCase):
         resources_to_build_collector = ResourcesToBuildCollector()
         resources_to_build_collector.add_layers([self.layer1, self.layer2])
         self.builder = ApplicationBuilder(
-            resources_to_build_collector, "builddir", "basedir", "cachedir", stream_writer=StreamWriter(sys.stderr)
+            resources_to_build_collector,
+            Mock(),
+            "builddir",
+            "basedir",
+            "cachedir",
+            stream_writer=StreamWriter(sys.stderr),
         )
 
     @patch("samcli.lib.build.app_builder.get_workflow_config")
@@ -635,7 +640,7 @@ class TestApplicationBuilder_update_template(TestCase):
 
     def setUp(self):
         self.builder = ApplicationBuilder(
-            Mock(), "builddir", "basedir", "cachedir", stream_writer=StreamWriter(sys.stderr)
+            Mock(), Mock(), "builddir", "basedir", "cachedir", stream_writer=StreamWriter(sys.stderr)
         )
 
         self.template_dict = {
@@ -914,7 +919,7 @@ class TestApplicationBuilder_update_template(TestCase):
 class TestApplicationBuilder_update_template_windows(TestCase):
     def setUp(self):
         self.builder = ApplicationBuilder(
-            Mock(), "builddir", "basedir", "cachedir", stream_writer=StreamWriter(sys.stderr)
+            Mock(), Mock(), "builddir", "basedir", "cachedir", stream_writer=StreamWriter(sys.stderr)
         )
 
         self.template_dict = {
@@ -998,6 +1003,7 @@ class TestApplicationBuilder_build_lambda_image_function(TestCase):
         self.stream_mock = Mock()
         self.docker_client_mock = Mock()
         self.builder = ApplicationBuilder(
+            Mock(),
             Mock(),
             "/build/dir",
             "/base/dir",
@@ -1182,7 +1188,7 @@ class TestApplicationBuilder_build_lambda_image_function(TestCase):
 class TestApplicationBuilder_build_function(TestCase):
     def setUp(self):
         self.builder = ApplicationBuilder(
-            Mock(), "/build/dir", "/base/dir", "cachedir", stream_writer=StreamWriter(sys.stderr)
+            Mock(), Mock(), "/build/dir", "/base/dir", "cachedir", stream_writer=StreamWriter(sys.stderr)
         )
 
     @patch("samcli.lib.build.app_builder.get_workflow_config")
@@ -1475,7 +1481,7 @@ class TestApplicationBuilder_build_function(TestCase):
 class TestApplicationBuilder_build_function_in_process(TestCase):
     def setUp(self):
         self.builder = ApplicationBuilder(
-            Mock(), "/build/dir", "/base/dir", "/cache/dir", mode="mode", stream_writer=StreamWriter(sys.stderr)
+            Mock(), Mock(), "/build/dir", "/base/dir", "/cache/dir", mode="mode", stream_writer=StreamWriter(sys.stderr)
         )
 
     @parameterized.expand([([],), (["ExpFlag1", "ExpFlag2"],)])
@@ -1593,6 +1599,7 @@ class TestApplicationBuilder_build_function_on_container(TestCase):
         self.container_manager = Mock()
         self.builder = ApplicationBuilder(
             Mock(),
+            Mock(),
             "/build/dir",
             "/base/dir",
             "/cache/dir",
@@ -1708,7 +1715,7 @@ class TestApplicationBuilder_parse_builder_response(TestCase):
     def setUp(self):
         self.image_name = "name"
         self.builder = ApplicationBuilder(
-            Mock(), "/build/dir", "/base/dir", "/cache/dir", stream_writer=StreamWriter(sys.stderr)
+            Mock(), Mock(), "/build/dir", "/base/dir", "/cache/dir", stream_writer=StreamWriter(sys.stderr)
         )
 
     def test_must_parse_json(self):
@@ -1760,53 +1767,6 @@ class TestApplicationBuilder_parse_builder_response(TestCase):
             self.builder._parse_builder_response(json.dumps(data), self.image_name)
 
         self.assertEqual(str(ctx.exception), msg)
-
-
-class TestApplicationBuilder_make_env_vars(TestCase):
-    def test_make_env_vars_with_env_file(self):
-        function1 = generate_function(name="Function1")
-        file_env_vars = {
-            "Parameters": {"ENV_VAR1": "1"},
-            "Function1": {"ENV_VAR2": "2"},
-            "Function2": {"ENV_VAR3": "3"},
-        }
-        result = ApplicationBuilder._make_env_vars(function1, file_env_vars, {})
-        self.assertEqual(result, {"ENV_VAR1": "1", "ENV_VAR2": "2"})
-
-    def test_make_env_vars_with_function_precedence(self):
-        function1 = generate_function(name="Function1")
-        file_env_vars = {
-            "Parameters": {"ENV_VAR1": "1"},
-            "Function1": {"ENV_VAR1": "2"},
-            "Function2": {"ENV_VAR3": "3"},
-        }
-        result = ApplicationBuilder._make_env_vars(function1, file_env_vars, {})
-        self.assertEqual(result, {"ENV_VAR1": "2"})
-
-    def test_make_env_vars_with_inline_env(self):
-        function1 = generate_function(name="Function1")
-        inline_env_vars = {
-            "Parameters": {"ENV_VAR1": "1"},
-            "Function1": {"ENV_VAR2": "2"},
-            "Function2": {"ENV_VAR3": "3"},
-        }
-        result = ApplicationBuilder._make_env_vars(function1, {}, inline_env_vars)
-        self.assertEqual(result, {"ENV_VAR1": "1", "ENV_VAR2": "2"})
-
-    def test_make_env_vars_with_both(self):
-        function1 = generate_function(name="Function1")
-        file_env_vars = {
-            "Parameters": {"ENV_VAR1": "1"},
-            "Function1": {"ENV_VAR2": "2"},
-            "Function2": {"ENV_VAR3": "3"},
-        }
-        inline_env_vars = {
-            "Parameters": {"ENV_VAR1": "2"},
-            "Function1": {"ENV_VAR2": "3"},
-            "Function2": {"ENV_VAR3": "3"},
-        }
-        result = ApplicationBuilder._make_env_vars(function1, file_env_vars, inline_env_vars)
-        self.assertEqual(result, {"ENV_VAR1": "2", "ENV_VAR2": "3"})
 
 
 class TestApplicationBuilder_get_build_options(TestCase):

@@ -66,6 +66,7 @@ class ImageFunctionSyncFlow(FunctionSyncFlow):
         """Build function image and save it in self._image_name"""
         builder = ApplicationBuilder(
             self._build_context.collect_build_resources(self._function_identifier),
+            self._build_context.build_graph,
             self._build_context.build_dir,
             self._build_context.base_dir,
             self._build_context.cache_dir,

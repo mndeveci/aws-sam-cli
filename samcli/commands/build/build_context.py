@@ -1,22 +1,29 @@
 """
 Context object used by build command
 """
+import json
 import logging
 import os
 import pathlib
 import shutil
-from typing import Dict, Optional, List, Tuple, cast
+from typing import Dict, Optional, List, Tuple, cast, Union
 
 import click
 
 from samcli.commands._utils.experimental import ExperimentalFlag, prompt_experimental
+from samcli.commands.local.lib.exceptions import OverridesNotWellDefinedError
 from samcli.lib.providers.sam_api_provider import SamApiProvider
 from samcli.lib.utils.packagetype import IMAGE
 
 from samcli.commands._utils.template import get_template_data
 from samcli.commands.build.exceptions import InvalidBuildDirException, MissingBuildMethodException
 from samcli.lib.bootstrap.nested_stack.nested_stack_manager import NestedStackManager
-from samcli.lib.build.build_graph import DEFAULT_DEPENDENCIES_DIR
+from samcli.lib.build.build_graph import (
+    DEFAULT_DEPENDENCIES_DIR,
+    BuildGraph,
+    FunctionBuildDefinition,
+    LayerBuildDefinition,
+)
 from samcli.lib.intrinsic_resolver.intrinsics_symbol_table import IntrinsicsSymbolTable
 from samcli.lib.providers.provider import ResourcesToBuildCollector, Stack, Function, LayerVersion
 from samcli.lib.providers.sam_function_provider import SamFunctionProvider
@@ -161,6 +168,7 @@ class BuildContext:
         self._container_manager: Optional[ContainerManager] = None
         self._stacks: List[Stack] = []
         self._locate_layer_nested = locate_layer_nested
+        self._build_graph: Optional[BuildGraph] = None
 
     def __enter__(self) -> "BuildContext":
         self.set_up()
@@ -208,6 +216,8 @@ class BuildContext:
                 docker_network_id=self._docker_network, skip_pull_image=self._skip_pull_image
             )
 
+        self._build_graph = self._generate_build_graph()
+
     def __exit__(self, *args):
         pass
 
@@ -225,6 +235,7 @@ class BuildContext:
         try:
             builder = ApplicationBuilder(
                 self.get_resources_to_build(),
+                self.build_graph,
                 self.build_dir,
                 self.base_dir,
                 self.cache_dir,
@@ -234,8 +245,6 @@ class BuildContext:
                 container_manager=self.container_manager,
                 mode=self.mode,
                 parallel=self._parallel,
-                container_env_var=self._container_env_var,
-                container_env_var_file=self._container_env_var_file,
                 build_images=self._build_images,
                 combine_dependencies=not self._create_auto_dependency_layer,
             )
@@ -584,6 +593,119 @@ Commands you can use next
             LOG.debug("Skip building pre-built layer: %s", layer.full_path)
             return False
         return True
+
+    @property
+    def build_graph(self) -> BuildGraph:
+        if not self._build_graph:
+            raise ValueError("Invalid method call, this should be called after entering into its context")
+        return self._build_graph
+
+    def _generate_build_graph(self):
+        """
+        Converts list of functions and layers into a build graph, where we can iterate on each unique build and trigger
+        build
+        :return: BuildGraph, which represents list of unique build definitions
+        """
+        build_graph = BuildGraph(self._build_dir)
+        resources_to_build = self.get_resources_to_build()
+        functions = resources_to_build.functions
+        layers = resources_to_build.layers
+
+        for function in functions:
+            container_env_vars = self._make_env_vars(function)
+            function_build_details = FunctionBuildDefinition(
+                function.runtime,
+                function.codeuri,
+                function.packagetype,
+                function.architecture,
+                function.metadata,
+                function.handler,
+                env_vars=container_env_vars,
+            )
+            build_graph.put_function_build_definition(function_build_details, function)
+
+        for layer in layers:
+            container_env_vars = self._make_env_vars(layer)
+
+            layer_build_details = LayerBuildDefinition(
+                layer.full_path,
+                layer.codeuri,
+                layer.build_method,
+                layer.compatible_runtimes,
+                layer.build_architecture,
+                env_vars=container_env_vars,
+            )
+            build_graph.put_layer_build_definition(layer_build_details, layer)
+
+        build_graph.clean_redundant_definitions_and_update(not self._resource_identifier)
+        return build_graph
+
+    def _get_file_env_vars(self) -> Dict:
+        if self._container_env_var_file:
+            try:
+                with open(self._container_env_var_file, "r", encoding="utf-8") as fp:
+                    return cast(Dict, json.load(fp))
+            except Exception as ex:
+                raise IOError(
+                    f"Could not read environment variables overrides from file {self._container_env_var_file}: {ex}"
+                ) from ex
+        return {}
+
+    def _make_env_vars(self, resource: Union[Function, LayerVersion]) -> Dict:
+        """Returns the environment variables configuration for this function
+
+        Priority order (high to low):
+        1. Function specific env vars from command line
+        2. Function specific env vars from json file
+        3. Global env vars from command line
+        4. Global env vars from json file
+
+        Parameters
+        ----------
+        resource : Union[Function, LayerVersion]
+            Lambda function or layer to generate the configuration for
+
+
+        Returns
+        -------
+        dictionary
+            Environment variable configuration for this function
+
+        Raises
+        ------
+        samcli.commands.local.lib.exceptions.OverridesNotWellDefinedError
+            If the environment dict is in the wrong format to process environment vars
+
+        """
+
+        name = resource.name
+        result = {}
+        file_env_vars = self._get_file_env_vars()
+
+        # validate and raise OverridesNotWellDefinedError
+        for env_var in list((file_env_vars or {}).values()) + list((self._container_env_var or {}).values()):
+            if not isinstance(env_var, dict):
+                reason = "Environment variables {} in incorrect format".format(env_var)
+                LOG.debug(reason)
+                raise OverridesNotWellDefinedError(reason)
+
+        if file_env_vars:
+            parameter_result = file_env_vars.get("Parameters", {})
+            result.update(parameter_result)
+
+        if self._container_env_var:
+            inline_parameter_result = self._container_env_var.get("Parameters", {})
+            result.update(inline_parameter_result)
+
+        if file_env_vars:
+            specific_result = file_env_vars.get(name, {})
+            result.update(specific_result)
+
+        if self._container_env_var:
+            inline_specific_result = self._container_env_var.get(name, {})
+            result.update(inline_specific_result)
+
+        return result
 
     _ESBUILD_WARNING_MESSAGE = (
         "Using esbuild for bundling Node.js and TypeScript is a beta feature.\n"
