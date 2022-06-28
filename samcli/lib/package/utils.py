@@ -218,7 +218,7 @@ def zip_folder(folder_path):
             os.remove(zipfile_name)
 
 
-def make_zip(file_name, source_root):
+def make_zip(file_name, source_root, update_file_info = False):
     """
     Create a zip file from the source directory
 
@@ -228,6 +228,8 @@ def make_zip(file_name, source_root):
         The basename of the zip file, without .zip
     source_root : str
         The path to the source directory
+    update_file_info : bool
+        Whether to update information about each file in zip to update external_attr and create_system info
     Returns
     -------
     str
@@ -242,7 +244,7 @@ def make_zip(file_name, source_root):
                 for filename in files:
                     full_path = os.path.join(root, filename)
                     relative_path = os.path.relpath(full_path, source_root)
-                    if platform.system().lower() == "windows":
+                    if update_file_info or platform.system().lower() == "windows":
                         with open(full_path, "rb") as data:
                             file_bytes = data.read()
                             info = zipfile.ZipInfo(relative_path)
