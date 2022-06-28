@@ -244,7 +244,7 @@ def make_zip(file_name, source_root, update_file_info = False):
                 for filename in files:
                     full_path = os.path.join(root, filename)
                     relative_path = os.path.relpath(full_path, source_root)
-                    if update_file_info or platform.system().lower() == "windows":
+                    if platform.system().lower() == "windows":
                         with open(full_path, "rb") as data:
                             file_bytes = data.read()
                             info = zipfile.ZipInfo(relative_path)
@@ -258,6 +258,12 @@ def make_zip(file_name, source_root, update_file_info = False):
                             # in the Lambda Trouble Shooting Docs
                             info.external_attr = 0o100755 << 16
                             # Set host OS to Unix
+                            info.create_system = 3
+                            zf.writestr(info, file_bytes, compress_type=compression_type)
+                    elif update_file_info:
+                        with open(full_path, "rb") as data:
+                            file_bytes = data.read()
+                            info = zipfile.ZipInfo(relative_path)
                             info.create_system = 3
                             zf.writestr(info, file_bytes, compress_type=compression_type)
                     else:
