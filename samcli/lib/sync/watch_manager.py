@@ -8,6 +8,7 @@ import threading
 from pathlib import Path
 from typing import List, Optional, TYPE_CHECKING
 
+from samcli.lib.sync.infra_sync_executor import InfraSyncExecutor
 from samcli.lib.utils.colors import Colored
 from samcli.lib.providers.exceptions import MissingCodeUri, MissingLocalDefinition, InvalidTemplateFile
 
@@ -138,10 +139,8 @@ class WatchManager:
 
     def _execute_infra_context(self) -> None:
         """Execute infrastructure sync"""
-        self._build_context.set_up()
-        self._build_context.run()
-        self._package_context.run()
-        self._deploy_context.run()
+        infra_sync_executor = InfraSyncExecutor(self._build_context, self._package_context, self._deploy_context)
+        infra_sync_executor.execute_infra_sync()
 
     def _start_code_sync(self) -> None:
         """Start SyncFlowExecutor in a separate thread."""
