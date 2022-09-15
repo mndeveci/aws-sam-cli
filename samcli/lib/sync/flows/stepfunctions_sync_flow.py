@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, TYPE_CHECKING, Optional
 
-
+from samcli.commands.sync.sync_context import SyncContext
 from samcli.lib.providers.provider import Stack, get_resource_by_id, ResourceIdentifier
 from samcli.lib.sync.sync_flow import SyncFlow, ResourceAPICall, get_definition_path
 from samcli.lib.sync.exceptions import InfraSyncRequiredError
@@ -29,6 +29,7 @@ class StepFunctionsSyncFlow(SyncFlow):
         state_machine_identifier: str,
         build_context: "BuildContext",
         deploy_context: "DeployContext",
+        sync_context: "SyncContext",
         physical_id_mapping: Dict[str, str],
         stacks: List[Stack],
     ):
@@ -49,6 +50,7 @@ class StepFunctionsSyncFlow(SyncFlow):
         super().__init__(
             build_context,
             deploy_context,
+            sync_context,
             physical_id_mapping,
             log_name="StepFunctions " + state_machine_identifier,
             stacks=stacks,

@@ -9,6 +9,7 @@ from contextlib import ExitStack
 
 from typing import Any, Dict, List, Optional, TYPE_CHECKING, cast
 
+from samcli.commands.sync.sync_context import SyncContext
 from samcli.lib.build.build_graph import BuildGraph
 from samcli.lib.providers.provider import Stack
 
@@ -44,6 +45,7 @@ class ZipFunctionSyncFlow(FunctionSyncFlow):
         function_identifier: str,
         build_context: "BuildContext",
         deploy_context: "DeployContext",
+        sync_context: "SyncContext",
         physical_id_mapping: Dict[str, str],
         stacks: List[Stack],
     ):
@@ -62,7 +64,7 @@ class ZipFunctionSyncFlow(FunctionSyncFlow):
         stacks : Optional[List[Stack]]
             Stacks
         """
-        super().__init__(function_identifier, build_context, deploy_context, physical_id_mapping, stacks)
+        super().__init__(function_identifier, build_context, deploy_context, sync_context, physical_id_mapping, stacks)
         self._s3_client = None
         self._artifact_folder = None
         self._zip_file = None
@@ -102,6 +104,12 @@ class ZipFunctionSyncFlow(FunctionSyncFlow):
         self._zip_file = make_zip(zip_file_path, self._artifact_folder)
         LOG.debug("%sCreated artifact ZIP file: %s", self.log_prefix, self._zip_file)
         self._local_sha = file_checksum(cast(str, self._zip_file), hashlib.sha256())
+
+    def compare_local(self) -> bool:
+        return self._sync_context.get_resource_latest_sync_hash(self._function_identifier) == self._local_sha
+
+    def update_local_hash(self) -> None:
+        self._sync_context.update_resource_sync_state(self._function_identifier, self._local_sha)
 
     def compare_remote(self) -> bool:
         remote_info = self._lambda_client.get_function(FunctionName=self.get_physical_id(self._function_identifier))

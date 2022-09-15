@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 from typing import Any, TYPE_CHECKING, cast, Dict, List, Optional
 from contextlib import ExitStack
 
+from samcli.commands.sync.sync_context import SyncContext
 from samcli.lib.build.app_builder import ApplicationBuilder
 from samcli.lib.package.utils import make_zip
 from samcli.lib.providers.provider import ResourceIdentifier, Stack, get_resource_by_id, Function, LayerVersion
@@ -49,10 +50,13 @@ class AbstractLayerSyncFlow(SyncFlow, ABC):
         layer_identifier: str,
         build_context: "BuildContext",
         deploy_context: "DeployContext",
+        sync_context: "SyncContext",
         physical_id_mapping: Dict[str, str],
         stacks: List[Stack],
     ):
-        super().__init__(build_context, deploy_context, physical_id_mapping, f"Layer {layer_identifier}", stacks)
+        super().__init__(
+            build_context, deploy_context, sync_context, physical_id_mapping, f"Layer {layer_identifier}", stacks
+        )
         self._layer_identifier = layer_identifier
         self._layer_arn = None
         self._old_layer_version = None
@@ -183,10 +187,11 @@ class LayerSyncFlow(AbstractLayerSyncFlow):
         layer_identifier: str,
         build_context: "BuildContext",
         deploy_context: "DeployContext",
+        sync_context: "SyncContext",
         physical_id_mapping: Dict[str, str],
         stacks: List[Stack],
     ):
-        super().__init__(layer_identifier, build_context, deploy_context, physical_id_mapping, stacks)
+        super().__init__(layer_identifier, build_context, deploy_context, sync_context, physical_id_mapping, stacks)
         self._layer = cast(LayerVersion, build_context.layer_provider.get(self._layer_identifier))
 
     def set_up(self) -> None:

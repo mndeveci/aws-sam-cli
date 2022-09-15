@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, TYPE_CHECKING
 import docker
 from docker.client import DockerClient
 
+from samcli.commands.sync.sync_context import SyncContext
 from samcli.lib.providers.provider import Stack
 from samcli.lib.sync.flows.function_sync_flow import FunctionSyncFlow, wait_for_function_update_complete
 from samcli.lib.package.ecr_uploader import ECRUploader
@@ -30,6 +31,7 @@ class ImageFunctionSyncFlow(FunctionSyncFlow):
         function_identifier: str,
         build_context: "BuildContext",
         deploy_context: "DeployContext",
+        sync_context: "SyncContext",
         physical_id_mapping: Dict[str, str],
         stacks: List[Stack],
         docker_client: Optional[DockerClient] = None,
@@ -51,7 +53,7 @@ class ImageFunctionSyncFlow(FunctionSyncFlow):
             Docker client to be used for building and uploading images.
             Defaults to docker.from_env() if None is provided.
         """
-        super().__init__(function_identifier, build_context, deploy_context, physical_id_mapping, stacks)
+        super().__init__(function_identifier, build_context, deploy_context, sync_context, physical_id_mapping, stacks)
         self._ecr_client = None
         self._image_name = None
         self._docker_client = docker_client

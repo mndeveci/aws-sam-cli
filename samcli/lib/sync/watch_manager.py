@@ -8,6 +8,7 @@ import threading
 from pathlib import Path
 from typing import List, Optional, TYPE_CHECKING
 
+from samcli.commands.sync.sync_context import SyncContext
 from samcli.lib.sync.infra_sync_executor import InfraSyncExecutor
 from samcli.lib.utils.colors import Colored
 from samcli.lib.providers.exceptions import MissingCodeUri, MissingLocalDefinition, InvalidTemplateFile
@@ -52,6 +53,7 @@ class WatchManager:
         build_context: "BuildContext",
         package_context: "PackageContext",
         deploy_context: "DeployContext",
+        sync_context: "SyncContext",
         auto_dependency_layer: bool,
     ):
         """Manager for sync watch execution logic.
@@ -73,6 +75,7 @@ class WatchManager:
         self._template = template
         self._build_context = build_context
         self._package_context = package_context
+        self._sync_context = sync_context
         self._deploy_context = deploy_context
         self._auto_dependency_layer = auto_dependency_layer
 
@@ -100,19 +103,21 @@ class WatchManager:
         """
         self._stacks = SamLocalStackProvider.get_stacks(self._template)[0]
         self._sync_flow_factory = SyncFlowFactory(
-            self._build_context, self._deploy_context, self._stacks, self._auto_dependency_layer
+            self._build_context, self._deploy_context, self._sync_context, self._stacks, self._auto_dependency_layer
         )
         self._sync_flow_factory.load_physical_id_mapping()
         self._trigger_factory = CodeTriggerFactory(self._stacks, Path(self._build_context.base_dir))
 
-    def _add_code_triggers(self) -> None:
+    def _add_code_triggers(self) -> List[ResourceIdentifier]:
         """Create CodeResourceTrigger for all resources and add their handlers to observer"""
         if not self._stacks or not self._trigger_factory:
-            return
+            return []
         resource_ids = get_all_resource_ids(self._stacks)
+        resource_ids_with_code_sync = []
         for resource_id in resource_ids:
             try:
                 trigger = self._trigger_factory.create_trigger(resource_id, self._on_code_change_wrapper(resource_id))
+                resource_ids_with_code_sync.append(resource_id)
             except (MissingCodeUri, MissingLocalDefinition):
                 LOG.warning(
                     self._color.yellow("CodeTrigger not created as CodeUri or DefinitionUri is missing for %s."),
@@ -123,6 +128,8 @@ class WatchManager:
             if not trigger:
                 continue
             self._observer.schedule_handlers(trigger.get_path_handlers())
+
+        return resource_ids_with_code_sync
 
     def _add_template_triggers(self) -> None:
         """Create TemplateTrigger and add its handlers to observer"""
@@ -137,10 +144,10 @@ class WatchManager:
 
             self._observer.schedule_handlers(template_trigger.get_path_handlers())
 
-    def _execute_infra_context(self) -> None:
+    def _execute_infra_context(self) -> bool:
         """Execute infrastructure sync"""
         infra_sync_executor = InfraSyncExecutor(self._build_context, self._package_context, self._deploy_context)
-        infra_sync_executor.execute_infra_sync()
+        return infra_sync_executor.execute_infra_sync()
 
     def _start_code_sync(self) -> None:
         """Start SyncFlowExecutor in a separate thread."""
@@ -186,7 +193,7 @@ class WatchManager:
         self._stop_code_sync()
         try:
             LOG.info(self._color.cyan("Starting infra sync."))
-            self._execute_infra_context()
+            did_infra_sync_executed = self._execute_infra_context()
         except Exception as e:
             LOG.error(
                 self._color.red("Failed to sync infra. Code sync is paused until template/stack is fixed."),
@@ -202,9 +209,17 @@ class WatchManager:
             self._observer.unschedule_all()
             self._update_stacks()
             self._add_template_triggers()
-            self._add_code_triggers()
+            resources_with_code_syncs = self._add_code_triggers()
             self._start_code_sync()
+            if not did_infra_sync_executed:
+                self._queue_all_code_syncs(resources_with_code_syncs)
             LOG.info(self._color.green("Infra sync completed."))
+
+    def _queue_all_code_syncs(self, resource_ids_with_code_sync: List[ResourceIdentifier]):
+        for resource_id in resource_ids_with_code_sync:
+            sync_flow = self._sync_flow_factory.create_sync_flow(resource_id)
+            if sync_flow:
+                self._sync_flow_executor.add_delayed_sync_flow(sync_flow)
 
     def _on_code_change_wrapper(self, resource_id: ResourceIdentifier) -> OnChangeCallback:
         """Wrapper method that generates a callback for code changes.

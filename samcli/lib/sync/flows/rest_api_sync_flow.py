@@ -4,6 +4,7 @@ from typing import Dict, List, TYPE_CHECKING, Set, cast, Optional
 
 from botocore.exceptions import ClientError
 
+from samcli.commands.sync.sync_context import SyncContext
 from samcli.lib.sync.flows.generic_api_sync_flow import GenericApiSyncFlow
 from samcli.lib.providers.provider import ResourceIdentifier, Stack, get_resource_by_id, get_resource_ids_by_type
 from samcli.lib.providers.exceptions import MissingLocalDefinition
@@ -27,6 +28,7 @@ class RestApiSyncFlow(GenericApiSyncFlow):
         api_identifier: str,
         build_context: "BuildContext",
         deploy_context: "DeployContext",
+        sync_context: "SyncContext",
         physical_id_mapping: Dict[str, str],
         stacks: List[Stack],
     ):
@@ -48,6 +50,7 @@ class RestApiSyncFlow(GenericApiSyncFlow):
             api_identifier,
             build_context,
             deploy_context,
+            sync_context,
             physical_id_mapping,
             log_name="RestApi " + api_identifier,
             stacks=stacks,

@@ -11,6 +11,7 @@ from samcli.commands._utils.template import get_template_data
 from samcli.commands.build.build_context import BuildContext
 from samcli.commands.deploy.deploy_context import DeployContext
 from samcli.commands.package.package_context import PackageContext
+from samcli.lib.utils.resources import AWS_SERVERLESS_FUNCTION, AWS_LAMBDA_FUNCTION
 from samcli.yamlhelper import yaml_parse
 
 LOG = logging.getLogger(__name__)
@@ -31,16 +32,17 @@ class InfraSyncExecutor:
         self._cfn_client = session.client("cloudformation")
         self._s3_client = session.client("s3")
 
-    def execute_infra_sync(self) -> None:
+    def execute_infra_sync(self) -> bool:
         self._build_context.set_up()
         self._build_context.run()
         self._package_context.run()
 
         if self._compare_templates(self._package_context.output_template_file, self._deploy_context.stack_name):
             LOG.info("Template haven't been changed since last deployment, skipping infra sync...")
-            return
+            return False
 
         self._deploy_context.run()
+        return True
 
     def _compare_templates(self, local_template_path: str, stack_name: str) -> bool:
         if local_template_path.startswith("https://"):
@@ -62,6 +64,8 @@ class InfraSyncExecutor:
 
         last_deployed_template_dict = yaml_parse(last_deployed_template_str)
 
+        self._remove_unnecesary_fields(last_deployed_template_dict)
+        self._remove_unnecesary_fields(current_template)
         if last_deployed_template_dict != current_template:
             return False
 
@@ -79,3 +83,10 @@ class InfraSyncExecutor:
                     return False
 
         return True
+
+    def _remove_unnecesary_fields(self, template_dict: dict):
+        resources = template_dict.get("Resources", [])
+        for resource_logical_id in resources:
+            resource_dict = resources.get(resource_logical_id)
+            if resource_dict.get("Type") in [AWS_SERVERLESS_FUNCTION, AWS_LAMBDA_FUNCTION]:
+                resource_dict.get("Properties", {}).pop("CodeUri", None)

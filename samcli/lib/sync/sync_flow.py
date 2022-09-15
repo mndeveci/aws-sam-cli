@@ -8,6 +8,7 @@ from threading import Lock
 from typing import Any, Dict, List, NamedTuple, Optional, TYPE_CHECKING, cast, Set
 from boto3.session import Session
 
+from samcli.commands.sync.sync_context import SyncContext
 from samcli.lib.providers.provider import get_resource_by_id
 
 from samcli.lib.providers.provider import ResourceIdentifier, Stack
@@ -54,6 +55,7 @@ class SyncFlow(ABC):
         self,
         build_context: "BuildContext",
         deploy_context: "DeployContext",
+        sync_context: "SyncContext",
         physical_id_mapping: Dict[str, str],
         log_name: str,
         stacks: Optional[List[Stack]] = None,
@@ -74,6 +76,7 @@ class SyncFlow(ABC):
         """
         self._build_context = build_context
         self._deploy_context = deploy_context
+        self._sync_context = sync_context
         self._log_name = log_name
         self._stacks = stacks
         self._session = None
@@ -109,6 +112,12 @@ class SyncFlow(ABC):
             Return False otherwise.
         """
         raise NotImplementedError("compare_remote")
+
+    def compare_local(self) -> bool:
+        return False
+
+    def update_local_hash(self) -> None:
+        pass
 
     @abstractmethod
     def sync(self) -> None:
@@ -309,11 +318,15 @@ class SyncFlow(ABC):
         LOG.debug("%sGathering Resources", self.log_prefix)
         self.gather_resources()
         LOG.debug("%sComparing with Remote", self.log_prefix)
-        if not self.compare_remote():
+        if not self.compare_local() and not self.compare_remote():
             LOG.debug("%sSyncing", self.log_prefix)
             self.sync()
+            LOG.debug("%sUpdating local hash", self.log_prefix)
+            self.update_local_hash()
             LOG.debug("%sGathering Dependencies", self.log_prefix)
             dependencies = self.gather_dependencies()
+        else:
+            self.update_local_hash()
         LOG.debug("%sFinished", self.log_prefix)
         return dependencies
 
