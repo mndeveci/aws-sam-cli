@@ -543,7 +543,7 @@ class TestDeployCliCommand(TestCase):
     )
     @patch("samcli.commands.deploy.guided_context.prompt")
     @patch("samcli.commands.deploy.guided_context.confirm")
-    @patch("samcli.commands.deploy.guided_config.SamConfig")
+    @patch("samcli.commands.deploy.guided_config.AbstractSamConfig")
     @patch("samcli.commands.deploy.guided_config.get_cmd_names")
     @patch("samcli.commands.deploy.guided_context.tag_translation")
     def test_all_args_guided_no_params_save_config(

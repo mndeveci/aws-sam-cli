@@ -9,7 +9,8 @@ from click.globals import _local  # type: ignore
 from click import Context
 
 from samcli.commands.deploy.exceptions import GuidedDeployFailedError
-from samcli.lib.config.samconfig import SamConfig, DEFAULT_CONFIG_FILE_NAME
+from samcli.lib.config.samconfig import AbstractSamConfig
+from samcli.lib.config.samconfig_toml import DEFAULT_CONFIG_FILE_NAME
 from samcli.lib.utils.osutils import tempfile_platform_independent, remove
 from samcli.commands.deploy.guided_config import GuidedConfig
 
@@ -38,7 +39,7 @@ class TestGuidedConfig(TestCase):
     def test_guided_config_init(self):
         ctx, samconfig = self.gc.get_config_ctx()
         self.assertTrue(isinstance(ctx, click.Context))
-        self.assertTrue(isinstance(samconfig, SamConfig))
+        self.assertTrue(isinstance(samconfig, AbstractSamConfig))
 
     def test_read_config_showcase(self):
         # No samconfig file present, no errors thrown.

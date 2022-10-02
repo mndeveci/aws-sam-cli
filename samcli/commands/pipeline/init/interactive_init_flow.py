@@ -17,7 +17,7 @@ from samcli.commands.exceptions import (
     AppPipelineTemplateMetadataException,
     PipelineTemplateCloneException,
 )
-from samcli.lib.config.samconfig import SamConfig
+from samcli.lib.config.samconfig_factory import get_sam_config
 from samcli.lib.cookiecutter.interactive_flow import InteractiveFlow
 from samcli.lib.cookiecutter.interactive_flow_creator import InteractiveFlowCreator
 from samcli.lib.cookiecutter.question import Choice
@@ -243,7 +243,7 @@ def _load_pipeline_bootstrap_resources() -> Tuple[List[str], Dict[str, str]]:
     section = "parameters"
     context: Dict = {}
 
-    config = SamConfig(PIPELINE_CONFIG_DIR, PIPELINE_CONFIG_FILENAME)
+    config = get_sam_config(PIPELINE_CONFIG_DIR, PIPELINE_CONFIG_FILENAME)
     if not config.exists():
         context[str(["stage_names_message"])] = ""
         return [], context

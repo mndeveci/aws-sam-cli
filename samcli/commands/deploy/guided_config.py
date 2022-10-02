@@ -7,7 +7,9 @@ import click
 
 from samcli.cli.context import get_cmd_names
 from samcli.commands.deploy.exceptions import GuidedDeployFailedError
-from samcli.lib.config.samconfig import SamConfig, DEFAULT_ENV, DEFAULT_CONFIG_FILE_NAME
+from samcli.lib.config.samconfig import DEFAULT_ENV, AbstractSamConfig
+from samcli.lib.config.samconfig_factory import get_sam_config
+from samcli.lib.config.samconfig_toml import DEFAULT_CONFIG_FILE_NAME
 
 
 class GuidedConfig:
@@ -19,8 +21,10 @@ class GuidedConfig:
         ctx = click.get_current_context()
 
         samconfig_dir = getattr(ctx, "samconfig_dir", None)
-        samconfig = SamConfig(
-            config_dir=samconfig_dir if samconfig_dir else SamConfig.config_dir(template_file_path=self.template_file),
+        samconfig = get_sam_config(
+            config_dir=samconfig_dir
+            if samconfig_dir
+            else AbstractSamConfig.config_dir(template_file_path=self.template_file),
             filename=config_file or DEFAULT_CONFIG_FILE_NAME,
         )
         return ctx, samconfig

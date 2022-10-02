@@ -67,7 +67,7 @@ class TestCli(TestCase):
             image_repository_arn=None,
             confirm_changeset=True,
             config_file="default",
-            config_env="samconfig.toml",
+            config_env="samconfig.yaml",
         )
 
     @patch("samcli.commands.pipeline.bootstrap.cli.do_cli")
@@ -205,24 +205,24 @@ class TestCli(TestCase):
         bootstrap_cli(**self.cli_context)
         environment_instance.bootstrap.assert_called_once_with(confirm_changeset=True)
 
-    @patch("samcli.commands.pipeline.bootstrap.cli.SamConfig")
+    @patch("samcli.commands.pipeline.bootstrap.cli.get_sam_config")
     @patch("samcli.commands.pipeline.bootstrap.cli._get_bootstrap_command_names")
     def test_load_saved_pipeline_user_arn_will_read_from_the_correct_file(
-        self, get_command_names_mock, sam_config_mock
+        self, get_command_names_mock, get_sam_config_mock
     ):
         # setup
         get_command_names_mock.return_value = PIPELINE_BOOTSTRAP_COMMAND_NAMES
         sam_config_instance_mock = Mock()
-        sam_config_mock.return_value = sam_config_instance_mock
+        get_sam_config_mock.return_value = sam_config_instance_mock
         sam_config_instance_mock.exists.return_value = False
 
         # trigger
         _load_saved_pipeline_user_arn()
 
         # verify
-        sam_config_mock.assert_called_once_with(config_dir=PIPELINE_CONFIG_DIR, filename=PIPELINE_CONFIG_FILENAME)
+        get_sam_config_mock.assert_called_once_with(config_dir=PIPELINE_CONFIG_DIR, filename=PIPELINE_CONFIG_FILENAME)
 
-    @patch("samcli.commands.pipeline.bootstrap.cli.SamConfig")
+    @patch("samcli.commands.pipeline.bootstrap.cli.AbstractSamConfig")
     @patch("samcli.commands.pipeline.bootstrap.cli._get_bootstrap_command_names")
     def test_load_saved_pipeline_user_arn_will_return_non_if_the_pipeline_toml_file_is_not_found(
         self, get_command_names_mock, sam_config_mock
@@ -239,7 +239,7 @@ class TestCli(TestCase):
         # verify
         self.assertIsNone(pipeline_user_arn)
 
-    @patch("samcli.commands.pipeline.bootstrap.cli.SamConfig")
+    @patch("samcli.commands.pipeline.bootstrap.cli.AbstractSamConfig")
     @patch("samcli.commands.pipeline.bootstrap.cli._get_bootstrap_command_names")
     def test_load_saved_pipeline_user_arn_will_return_non_if_the_pipeline_toml_file_does_not_contain_pipeline_user(
         self, get_command_names_mock, sam_config_mock
@@ -257,15 +257,15 @@ class TestCli(TestCase):
         # verify
         self.assertIsNone(pipeline_user_arn)
 
-    @patch("samcli.commands.pipeline.bootstrap.cli.SamConfig")
+    @patch("samcli.commands.pipeline.bootstrap.cli.get_sam_config")
     @patch("samcli.commands.pipeline.bootstrap.cli._get_bootstrap_command_names")
     def test_load_saved_pipeline_user_arn_returns_the_pipeline_user_arn_from_the_pipeline_toml_file(
-        self, get_command_names_mock, sam_config_mock
+        self, get_command_names_mock, get_sam_config_mock
     ):
         # setup
         get_command_names_mock.return_value = PIPELINE_BOOTSTRAP_COMMAND_NAMES
         sam_config_instance_mock = Mock()
-        sam_config_mock.return_value = sam_config_instance_mock
+        get_sam_config_mock.return_value = sam_config_instance_mock
         sam_config_instance_mock.exists.return_value = True
         sam_config_instance_mock.get_all.return_value = {"pipeline_user": ANY_PIPELINE_USER_ARN}
 

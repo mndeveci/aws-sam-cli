@@ -9,7 +9,8 @@ import click
 
 from samcli.cli.cli_config_file import configuration_option, TomlProvider
 from samcli.cli.main import pass_context, common_options, aws_creds_options, print_cmdline_args
-from samcli.lib.config.samconfig import SamConfig
+from samcli.lib.config.samconfig import AbstractSamConfig
+from samcli.lib.config.samconfig_factory import get_sam_config
 from samcli.lib.pipeline.bootstrap.stage import Stage
 from samcli.lib.telemetry.metric import track_command
 from samcli.lib.utils.colors import Colored
@@ -234,7 +235,7 @@ def do_cli(
 
 
 def _load_saved_pipeline_user_arn() -> Optional[str]:
-    samconfig: SamConfig = SamConfig(config_dir=PIPELINE_CONFIG_DIR, filename=PIPELINE_CONFIG_FILENAME)
+    samconfig: AbstractSamConfig = get_sam_config(config_dir=PIPELINE_CONFIG_DIR, filename=PIPELINE_CONFIG_FILENAME)
     if not samconfig.exists():
         return None
     config: Dict[str, str] = samconfig.get_all(cmd_names=_get_bootstrap_command_names(), section="parameters")

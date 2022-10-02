@@ -15,9 +15,12 @@ import click
 
 from samcli.commands.exceptions import ConfigException
 from samcli.cli.context import get_cmd_names
-from samcli.lib.config.samconfig import SamConfig, DEFAULT_ENV, DEFAULT_CONFIG_FILE_NAME
+from samcli.lib.config.samconfig import DEFAULT_ENV
+from samcli.lib.config.samconfig_factory import get_sam_config
 
 __all__ = ("TomlProvider", "configuration_option", "get_ctx_defaults")
+
+from samcli.lib.config.samconfig_yaml import DEFAULT_CONFIG_FILE_NAME
 
 LOG = logging.getLogger(__name__)
 
@@ -57,7 +60,7 @@ class TomlProvider:
         config_file_name = config_file_path.name
         config_file_dir = config_file_path.parents[0]
 
-        samconfig = SamConfig(config_file_dir, config_file_name)
+        samconfig = get_sam_config(config_file_dir, config_file_name)
 
         # Enable debug level logging by environment variable "SAM_DEBUG"
         if os.environ.get("SAM_DEBUG", "").lower() == "true":
@@ -251,7 +254,7 @@ def decorator_customize_config_file(f):
         "see: "
         "https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-config.html."
     )
-    config_file_attrs["default"] = "samconfig.toml"
+    config_file_attrs["default"] = "samconfig.yaml"
     config_file_attrs["is_eager"] = True
     config_file_attrs["required"] = False
     config_file_attrs["type"] = click.STRING

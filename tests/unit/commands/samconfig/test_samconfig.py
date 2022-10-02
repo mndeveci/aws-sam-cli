@@ -8,7 +8,8 @@ import shutil
 import tempfile
 from pathlib import Path
 from contextlib import contextmanager
-from samcli.lib.config.samconfig import SamConfig, DEFAULT_ENV
+from samcli.lib.config.samconfig import DEFAULT_ENV
+from samcli.lib.config.samconfig_factory import get_sam_config
 
 from click.testing import CliRunner
 
@@ -675,7 +676,7 @@ class TestSamConfigForAllCommands(TestCase):
                 None,
                 {"function": {"profile_name": "profile", "profile_owner": "owner"}},
                 False,
-                "samconfig.toml",
+                "samconfig.yaml",
                 "default",
                 False,
                 True,
@@ -793,7 +794,7 @@ class TestSamConfigForAllCommands(TestCase):
                 None,
                 {"function": {"profile_name": "profile", "profile_owner": "owner"}},
                 False,
-                "samconfig.toml",
+                "samconfig.yaml",
                 "default",
                 False,
                 True,
@@ -1002,7 +1003,7 @@ class TestSamConfigForAllCommands(TestCase):
                 {"a": "tag1", "b": "tag with spaces"},
                 {"m1": "value1", "m2": "value2"},
                 True,
-                "samconfig.toml",
+                "samconfig.yaml",
                 "default",
             )
 
@@ -1269,7 +1270,7 @@ def samconfig_parameters(cmd_names, config_dir=None, env=None, **kwargs):
 
     env = env or DEFAULT_ENV
     section = "parameters"
-    samconfig = SamConfig(config_dir=config_dir)
+    samconfig = get_sam_config(config_dir=config_dir)
 
     try:
         for k, v in kwargs.items():

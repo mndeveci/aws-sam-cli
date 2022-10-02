@@ -9,7 +9,8 @@ from typing import Dict, List, Optional, Tuple
 import boto3
 import click
 
-from samcli.lib.config.samconfig import SamConfig
+from samcli.lib.config.samconfig import AbstractSamConfig
+from samcli.lib.config.samconfig_factory import get_sam_config
 from samcli.lib.utils.colors import Colored
 from samcli.lib.utils.managed_cloudformation_stack import manage_stack, StackOutput
 from samcli.lib.pipeline.bootstrap.resource import Resource, IAMUser, ECRImageRepository
@@ -248,7 +249,7 @@ class Stage:
         ValueError: if the artifacts_bucket or ImageRepository ARNs are invalid
         """
 
-        samconfig: SamConfig = SamConfig(config_dir=config_dir, filename=filename)
+        samconfig: AbstractSamConfig = get_sam_config(config_dir=config_dir, filename=filename)
 
         if self.pipeline_user.arn:
             samconfig.put(cmd_names=cmd_names, section="parameters", key=PIPELINE_USER, value=self.pipeline_user.arn)

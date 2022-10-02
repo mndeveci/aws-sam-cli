@@ -3,7 +3,9 @@ from pathlib import Path
 from unittest import TestCase
 
 from samcli.lib.config.exceptions import SamConfigVersionException
-from samcli.lib.config.samconfig import SamConfig, DEFAULT_CONFIG_FILE_NAME, DEFAULT_GLOBAL_CMDNAME, DEFAULT_ENV
+from samcli.lib.config.samconfig import DEFAULT_GLOBAL_CMDNAME, DEFAULT_ENV
+from samcli.lib.config.samconfig_factory import get_sam_config
+from samcli.lib.config.samconfig_yaml import DEFAULT_CONFIG_FILE_NAME
 from samcli.lib.config.version import VERSION_KEY, SAM_CONFIG_VERSION
 from samcli.lib.utils import osutils
 
@@ -11,7 +13,7 @@ from samcli.lib.utils import osutils
 class TestSamConfig(TestCase):
     def setUp(self):
         self.config_dir = os.getcwd()
-        self.samconfig = SamConfig(self.config_dir)
+        self.samconfig = get_sam_config(self.config_dir)
 
     def tearDown(self):
         if self.samconfig.exists():
@@ -25,7 +27,7 @@ class TestSamConfig(TestCase):
     def _check_config_file(self):
         self.assertTrue(self.samconfig.exists())
         self.assertTrue(self.samconfig.sanity_check())
-        self.assertEqual(SAM_CONFIG_VERSION, self.samconfig.document.get(VERSION_KEY))
+        self.assertEqual(SAM_CONFIG_VERSION, self.samconfig.version())
 
     def _update_samconfig(self, cmd_names, section, key, value, env=None):
         if env:
@@ -36,7 +38,7 @@ class TestSamConfig(TestCase):
         self._check_config_file()
 
     def test_init(self):
-        self.assertEqual(self.samconfig.filepath, Path(self.config_dir, DEFAULT_CONFIG_FILE_NAME))
+        self.assertEqual(self.samconfig._filepath, Path(self.config_dir, DEFAULT_CONFIG_FILE_NAME))
 
     def test_get_stage_configuration_names(self):
         self.assertEqual(self.samconfig.get_stage_configuration_names(), [])
@@ -162,9 +164,9 @@ class TestSamConfig(TestCase):
             {"testKey": "ValueFromGlobal"},
             self.samconfig.get_all(cmd_names=["myCommand"], section="mySection", env="myEnv"),
         )
-        self.assertEqual(self.samconfig.document["myEnv"]["myCommand"]["mySection"], {})
+        self.assertEqual(self.samconfig._document["myEnv"]["myCommand"]["mySection"], {})
         self.assertEqual(
-            self.samconfig.document["myEnv"][DEFAULT_GLOBAL_CMDNAME]["mySection"], {"testKey": "ValueFromGlobal"}
+            self.samconfig._document["myEnv"][DEFAULT_GLOBAL_CMDNAME]["mySection"], {"testKey": "ValueFromGlobal"}
         )
 
     def test_check_config_get(self):
@@ -182,36 +184,36 @@ class TestSamConfig(TestCase):
 
     def test_check_version_non_supported_type(self):
         self._setup_config()
-        self.samconfig.document.remove(VERSION_KEY)
-        self.samconfig.document.add(VERSION_KEY, "aadeff")
+        self.samconfig._document.pop(VERSION_KEY, None)
+        self.samconfig._document[VERSION_KEY] = "aadeff"
         with self.assertRaises(SamConfigVersionException):
             self.samconfig.sanity_check()
 
     def test_check_version_no_version_exists(self):
         self._setup_config()
-        self.samconfig.document.remove(VERSION_KEY)
+        self.samconfig._document.pop(VERSION_KEY, None)
         with self.assertRaises(SamConfigVersionException):
             self.samconfig.sanity_check()
 
     def test_check_version_float(self):
         self._setup_config()
-        self.samconfig.document.remove(VERSION_KEY)
-        self.samconfig.document.add(VERSION_KEY, 0.2)
+        self.samconfig._document.pop(VERSION_KEY, None)
+        self.samconfig._document[VERSION_KEY] = 0.2
         self.samconfig.sanity_check()
 
     def test_write_config_file_non_standard_version(self):
         self._setup_config()
-        self.samconfig.document.remove(VERSION_KEY)
-        self.samconfig.document.add(VERSION_KEY, 0.2)
+        self.samconfig._document.pop(VERSION_KEY, None)
+        self.samconfig._document[VERSION_KEY] = 0.2
         self.samconfig.put(cmd_names=["local", "start", "api"], section="parameters", key="skip_pull_image", value=True)
         self.samconfig.sanity_check()
-        self.assertEqual(self.samconfig.document.get(VERSION_KEY), 0.2)
+        self.assertEqual(self.samconfig.version(), 0.2)
 
     def test_write_config_file_will_create_the_file_if_not_exist(self):
         with osutils.mkdir_temp(ignore_errors=True) as tempdir:
             non_existing_dir = os.path.join(tempdir, "non-existing-dir")
             non_existing_file = "non-existing-file"
-            samconfig = SamConfig(config_dir=non_existing_dir, filename=non_existing_file)
+            samconfig = get_sam_config(config_dir=non_existing_dir, filename=non_existing_file)
 
             self.assertFalse(samconfig.exists())
 

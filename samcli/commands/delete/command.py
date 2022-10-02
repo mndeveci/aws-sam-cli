@@ -44,7 +44,6 @@ LOG = logging.getLogger(__name__)
         "https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-config.html."
     ),
     type=click.STRING,
-    default="samconfig.toml",
     show_default=True,
 )
 @click.option(

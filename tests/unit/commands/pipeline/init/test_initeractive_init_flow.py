@@ -110,7 +110,7 @@ class TestInteractiveInitFlow(TestCase):
         with self.assertRaises(AppPipelineTemplateManifestException):
             InteractiveInitFlow(allow_bootstrap=False).do_interactive()
 
-    @patch("samcli.commands.pipeline.init.interactive_init_flow.SamConfig")
+    @patch("samcli.commands.pipeline.init.interactive_init_flow.get_sam_config")
     @patch("samcli.commands.pipeline.init.interactive_init_flow.osutils")
     @patch("samcli.lib.cookiecutter.template.cookiecutter")
     @patch("samcli.commands.pipeline.init.interactive_init_flow.InteractiveFlowCreator.create_flow")
@@ -129,7 +129,7 @@ class TestInteractiveInitFlow(TestCase):
         create_interactive_flow_mock,
         cookiecutter_mock,
         osutils_mock,
-        samconfig_mock,
+        get_samconfig_mock,
     ):
         # setup
         any_app_pipeline_templates_path = Path(
@@ -155,7 +155,7 @@ class TestInteractiveInitFlow(TestCase):
         cookiecutter_context_mock = {"key": "value"}
         interactive_flow_mock.run.return_value = cookiecutter_context_mock
         config_file = Mock()
-        samconfig_mock.return_value = config_file
+        get_samconfig_mock.return_value = config_file
         config_file.exists.return_value = True
         config_file.get_stage_configuration_names.return_value = ["testing", "prod"]
         config_file.get_stage_configuration_names.return_value = ["testing", "prod"]
@@ -384,7 +384,7 @@ class TestInteractiveInitFlow(TestCase):
 
 
 class TestInteractiveInitFlowWithBootstrap(TestCase):
-    @patch("samcli.commands.pipeline.init.interactive_init_flow.SamConfig")
+    @patch("samcli.commands.pipeline.init.interactive_init_flow.get_sam_config")
     @patch("samcli.commands.pipeline.init.interactive_init_flow.osutils")
     @patch("samcli.lib.cookiecutter.template.cookiecutter")
     @patch("samcli.commands.pipeline.init.interactive_init_flow.InteractiveFlowCreator.create_flow")
@@ -407,7 +407,7 @@ class TestInteractiveInitFlowWithBootstrap(TestCase):
         create_interactive_flow_mock,
         cookiecutter_mock,
         osutils_mock,
-        samconfig_mock,
+        get_samconfig_mock,
     ):
         # setup
         any_app_pipeline_templates_path = Path(
@@ -433,7 +433,7 @@ class TestInteractiveInitFlowWithBootstrap(TestCase):
         cookiecutter_context_mock = {"key": "value"}
         interactive_flow_mock.run.return_value = cookiecutter_context_mock
         config_file = Mock()
-        samconfig_mock.return_value = config_file
+        get_samconfig_mock.return_value = config_file
         config_file.exists.return_value = True
         config_file.get_stage_configuration_names.return_value = ["testing"]
         config_file.get_all.return_value = {"pipeline_execution_role": "arn:aws:iam::123456789012:role/execution-role"}
@@ -460,7 +460,7 @@ class TestInteractiveInitFlowWithBootstrap(TestCase):
             ([[], ["testing"], ["testing", "prod"]], [call([], 2), call(["testing"], 2)]),
         ]
     )
-    @patch("samcli.commands.pipeline.init.interactive_init_flow.SamConfig")
+    @patch("samcli.commands.pipeline.init.interactive_init_flow.get_sam_config")
     @patch("samcli.commands.pipeline.init.interactive_init_flow.osutils")
     @patch("samcli.lib.cookiecutter.template.cookiecutter")
     @patch("samcli.commands.pipeline.init.interactive_init_flow.InteractiveFlowCreator.create_flow")
@@ -485,7 +485,7 @@ class TestInteractiveInitFlowWithBootstrap(TestCase):
         create_interactive_flow_mock,
         cookiecutter_mock,
         osutils_mock,
-        samconfig_mock,
+        get_samconfig_mock,
     ):
         # setup
         any_app_pipeline_templates_path = Path(
@@ -511,7 +511,7 @@ class TestInteractiveInitFlowWithBootstrap(TestCase):
         cookiecutter_context_mock = {"key": "value"}
         interactive_flow_mock.run.return_value = cookiecutter_context_mock
         config_file = Mock()
-        samconfig_mock.return_value = config_file
+        get_samconfig_mock.return_value = config_file
         config_file.exists.return_value = True
         config_file.get_stage_configuration_names.side_effect = get_stage_configuration_name_side_effects
         config_file.get_all.return_value = {"pipeline_execution_role": "arn:aws:iam::123456789012:role/execution-role"}

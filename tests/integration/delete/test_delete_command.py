@@ -1,19 +1,12 @@
 import os
-import shutil
-import tempfile
 import time
-import uuid
 import pytest
-from pathlib import Path
 from unittest import skipIf
 import boto3
 import docker
-from botocore.config import Config
 from parameterized import parameterized
 from botocore.exceptions import ClientError
 
-from samcli.lib.bootstrap.bootstrap import SAM_CLI_STACK_NAME
-from samcli.lib.config.samconfig import DEFAULT_CONFIG_FILE_NAME
 from tests.integration.deploy.deploy_integ_base import DeployIntegBase
 from tests.integration.delete.delete_integ_base import DeleteIntegBase
 from tests.integration.package.package_integ_base import PackageIntegBase

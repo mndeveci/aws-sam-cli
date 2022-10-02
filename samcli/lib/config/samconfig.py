@@ -2,50 +2,32 @@
 Class representing the samconfig.toml
 """
 
-import os
 import logging
-
+import os
+from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Dict, Optional
 
-import tomlkit
-
-from samcli.lib.config.version import SAM_CONFIG_VERSION, VERSION_KEY
 from samcli.lib.config.exceptions import SamConfigVersionException
+from samcli.lib.config.version import VERSION_KEY
 
 LOG = logging.getLogger(__name__)
 
-DEFAULT_CONFIG_FILE_NAME = "samconfig.toml"
 DEFAULT_ENV = "default"
 DEFAULT_GLOBAL_CMDNAME = "global"
 
 
-class SamConfig:
-    """
-    Class to interface with `samconfig.toml` file.
-    """
+class AbstractSamConfig(ABC):
 
-    document = None
+    _filepath: Path
+    _document: Optional[Dict]
 
-    def __init__(self, config_dir, filename=None):
-        """
-        Initialize the class
+    def __init__(self, filepath: Path):
+        self._filepath = filepath
+        self._document = None
 
-        Parameters
-        ----------
-        config_dir : string
-            Directory where the configuration file needs to be stored
-        filename : string
-            Optional. Name of the configuration file. It is recommended to stick with default so in the future we
-            could automatically support auto-resolving multiple config files within same directory.
-        """
-        self.filepath = Path(config_dir, filename or DEFAULT_CONFIG_FILE_NAME)
-
-    def get_stage_configuration_names(self):
-        self._read()
-        if isinstance(self.document, dict):
-            return [stage for stage, value in self.document.items() if isinstance(value, dict)]
-        return []
+    def exists(self):
+        return self._filepath.exists()
 
     def get_all(self, cmd_names, section, env=DEFAULT_ENV):
         """
@@ -77,15 +59,30 @@ class SamConfig:
         env = env or DEFAULT_ENV
 
         self._read()
-        if isinstance(self.document, dict):
-            toml_content = self.document.get(env, {})
-            params = toml_content.get(self._to_key(cmd_names), {}).get(section, {})
-            if DEFAULT_GLOBAL_CMDNAME in toml_content:
-                global_params = toml_content.get(DEFAULT_GLOBAL_CMDNAME, {}).get(section, {})
+        if isinstance(self._document, dict):
+            env_content = self._document.get(env, {})
+            params = env_content.get(self._to_key(cmd_names), {}).get(section, {})
+            if DEFAULT_GLOBAL_CMDNAME in env_content:
+                global_params = env_content.get(DEFAULT_GLOBAL_CMDNAME, {}).get(section, {})
                 global_params.update(params.copy())
                 params = global_params.copy()
             return params
         return {}
+
+    def flush(self):
+        """
+        Write the data back to file
+
+        Raises
+        ------
+        tomlkit.exceptions.TOMLKitError
+            If the data is invalid
+
+        """
+        self._write()
+
+    def path(self):
+        return str(self._filepath)
 
     def put(self, cmd_names, section, key, value, env=DEFAULT_ENV):
         """
@@ -112,13 +109,13 @@ class SamConfig:
             If the data is invalid
         """
 
-        if not self.document:
+        if not self._document:
             self._read()
         # Empty document prepare the initial structure.
-        # self.document is a nested dict, we need to check each layer and add new tables, otherwise duplicated key
+        # self._document is a nested dict, we need to check each layer and add new tables, otherwise duplicated key
         # in parent layer will override the whole child layer
         cmd_name_key = self._to_key(cmd_names)
-        env_content = self.document.get(env, {})
+        env_content = self._document.get(env, {})
         cmd_content = env_content.get(cmd_name_key, {})
         param_content = cmd_content.get(section, {})
         if param_content:
@@ -128,22 +125,10 @@ class SamConfig:
         elif env_content:
             env_content.update({cmd_name_key: {section: {key: value}}})
         else:
-            self.document.update({env: {cmd_name_key: {section: {key: value}}}})
+            self._document.update({env: {cmd_name_key: {section: {key: value}}}})
         # If the value we want to add to samconfig already exist in global section, we don't put it again in
         # the special command section
         self._deduplicate_global_parameters(cmd_name_key, section, key, env)
-
-    def flush(self):
-        """
-        Write the data back to file
-
-        Raises
-        ------
-        tomlkit.exceptions.TOMLKitError
-            If the data is invalid
-
-        """
-        self._write()
 
     def sanity_check(self):
         """
@@ -151,61 +136,26 @@ class SamConfig:
         """
         try:
             self._read()
-        except tomlkit.exceptions.TOMLKitError:
+        except SamConfigVersionException as ex:
+            raise ex
+        except Exception as ex:
+            LOG.debug("Invalid configuration file contents", exc_info=ex)
             return False
         else:
             return True
 
-    def exists(self):
-        return self.filepath.exists()
+    def get_stage_configuration_names(self):
+        self._read()
+        if isinstance(self._document, dict):
+            return [stage for stage, value in self._document.items() if isinstance(value, dict)]
+        return []
 
     def _ensure_exists(self):
-        self.filepath.parent.mkdir(parents=True, exist_ok=True)
-        self.filepath.touch()
+        self._filepath.parent.mkdir(parents=True, exist_ok=True)
+        self._filepath.touch()
 
-    def path(self):
-        return str(self.filepath)
-
-    @staticmethod
-    def config_dir(template_file_path=None):
-        """
-        SAM Config file is always relative to the SAM Template. If it the template is not
-        given, then it is relative to cwd()
-        """
-        if template_file_path:
-            return os.path.dirname(template_file_path)
-
-        return os.getcwd()
-
-    def _read(self):
-        if not self.document:
-            try:
-                txt = self.filepath.read_text()
-                self.document = tomlkit.loads(txt)
-                self._version_sanity_check(self._version())
-            except OSError:
-                self.document = tomlkit.document()
-
-        if self.document.body:
-            self._version_sanity_check(self._version())
-        return self.document
-
-    def _write(self):
-        if not self.document:
-            return
-
-        self._ensure_exists()
-
-        current_version = self._version() if self._version() else SAM_CONFIG_VERSION
-        try:
-            self.document.add(VERSION_KEY, current_version)
-        except tomlkit.exceptions.KeyAlreadyPresent:
-            # NOTE(TheSriram): Do not attempt to re-write an existing version
-            pass
-        self.filepath.write_text(tomlkit.dumps(self.document))
-
-    def _version(self):
-        return self.document.get(VERSION_KEY, None)
+    def version(self):
+        return (self._document or dict).get(VERSION_KEY, None)
 
     def _deduplicate_global_parameters(self, cmd_name_key, section, key, env=DEFAULT_ENV):
         """
@@ -226,8 +176,8 @@ class SamConfig:
         env : str
             Optional, Name of the environment
         """
-        global_params = self.document.get(env, {}).get(DEFAULT_GLOBAL_CMDNAME, {}).get(section, {})
-        command_params = self.document.get(env, {}).get(cmd_name_key, {}).get(section, {})
+        global_params = self._document.get(env, {}).get(DEFAULT_GLOBAL_CMDNAME, {}).get(section, {})
+        command_params = self._document.get(env, {}).get(cmd_name_key, {}).get(section, {})
         if (
             cmd_name_key != DEFAULT_GLOBAL_CMDNAME
             and global_params
@@ -239,11 +189,11 @@ class SamConfig:
             save_global_message = (
                 f'\n\tParameter "{key}={value}" in [{env}.{cmd_name_key}.{section}] is defined as a global '
                 f"parameter [{env}.{DEFAULT_GLOBAL_CMDNAME}.{section}].\n\tThis parameter will be only saved "
-                f"under [{env}.{DEFAULT_GLOBAL_CMDNAME}.{section}] in {self.filepath}."
+                f"under [{env}.{DEFAULT_GLOBAL_CMDNAME}.{section}] in {self._filepath}."
             )
             LOG.info(save_global_message)
             # Only keep the global parameter
-            del self.document[env][cmd_name_key][section][key]
+            del self._document[env][cmd_name_key][section][key]
 
     @staticmethod
     def _version_sanity_check(version: Any) -> None:
@@ -254,3 +204,22 @@ class SamConfig:
     def _to_key(cmd_names: Iterable[str]) -> str:
         # construct a parsed name that is of the format: a_b_c_d
         return "_".join([cmd.replace("-", "_").replace(" ", "_") for cmd in cmd_names])
+
+    @staticmethod
+    def config_dir(template_file_path=None):
+        """
+        SAM Config file is always relative to the SAM Template. If it the template is not
+        given, then it is relative to cwd()
+        """
+        if template_file_path:
+            return os.path.dirname(template_file_path)
+
+        return os.getcwd()
+
+    @abstractmethod
+    def _read(self):
+        pass
+
+    @abstractmethod
+    def _write(self):
+        pass

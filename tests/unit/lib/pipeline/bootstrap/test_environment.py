@@ -222,11 +222,11 @@ class TestStage(TestCase):
         self.assertEqual(ANY_ARN, stage.cloudformation_execution_role.arn)
         self.assertEqual(ANY_ARN, stage.artifacts_bucket.arn)
 
-    @patch("samcli.lib.pipeline.bootstrap.stage.SamConfig")
-    def test_save_config_escapes_none_resources(self, samconfig_mock):
+    @patch("samcli.lib.pipeline.bootstrap.stage.get_sam_config")
+    def test_save_config_escapes_none_resources(self, get_samconfig_mock):
         cmd_names = ["any", "commands"]
         samconfig_instance_mock = Mock()
-        samconfig_mock.return_value = samconfig_instance_mock
+        get_samconfig_mock.return_value = samconfig_instance_mock
         stage: Stage = Stage(name=ANY_STAGE_CONFIGURATION_NAME)
 
         empty_ecr_call = call(
@@ -325,19 +325,19 @@ class TestStage(TestCase):
         self.assertEqual(secret, "SuperSecretKey")
         sm_client_mock.get_secret_value.assert_called_once_with(SecretId="dummy_arn")
 
-    @patch("samcli.lib.pipeline.bootstrap.stage.SamConfig")
-    def test_save_config_ignores_exceptions_thrown_while_calculating_artifacts_bucket_name(self, samconfig_mock):
+    @patch("samcli.lib.pipeline.bootstrap.stage.get_sam_config")
+    def test_save_config_ignores_exceptions_thrown_while_calculating_artifacts_bucket_name(self, get_samconfig_mock):
         samconfig_instance_mock = Mock()
-        samconfig_mock.return_value = samconfig_instance_mock
+        get_samconfig_mock.return_value = samconfig_instance_mock
         stage: Stage = Stage(name=ANY_STAGE_CONFIGURATION_NAME, artifacts_bucket_arn="invalid ARN")
         # calling artifacts_bucket.name() during save_config() will raise a ValueError exception, we need to make sure
         # this exception is swallowed so that other configs can be safely saved to the pipelineconfig.toml file
         stage.save_config(config_dir="any_config_dir", filename="any_pipeline.toml", cmd_names=["any", "commands"])
 
-    @patch("samcli.lib.pipeline.bootstrap.stage.SamConfig")
-    def test_save_config_ignores_exceptions_thrown_while_calculating_image_repository_uri(self, samconfig_mock):
+    @patch("samcli.lib.pipeline.bootstrap.stage.get_sam_config")
+    def test_save_config_ignores_exceptions_thrown_while_calculating_image_repository_uri(self, get_samconfig_mock):
         samconfig_instance_mock = Mock()
-        samconfig_mock.return_value = samconfig_instance_mock
+        get_samconfig_mock.return_value = samconfig_instance_mock
         stage: Stage = Stage(name=ANY_STAGE_CONFIGURATION_NAME, image_repository_arn="invalid ARN")
         # calling image_repository.get_uri() during save_config() will raise a ValueError exception, we need to make
         # sure this exception is swallowed so that other configs can be safely saved to the pipelineconfig.toml file

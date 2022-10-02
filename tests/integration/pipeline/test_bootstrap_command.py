@@ -3,7 +3,7 @@ from unittest import skipIf
 from parameterized import parameterized
 
 from samcli.commands.pipeline.bootstrap.cli import PIPELINE_CONFIG_FILENAME, PIPELINE_CONFIG_DIR
-from samcli.lib.config.samconfig import SamConfig
+from samcli.lib.config.samconfig_factory import get_sam_config
 from tests.integration.pipeline.base import BootstrapIntegBase
 from tests.testing_utils import (
     run_command_with_input,
@@ -168,7 +168,7 @@ class TestBootstrap(BootstrapIntegBase):
             output_values[value["OutputKey"]] = value["OutputValue"]
 
         # Get values saved in config file
-        config = SamConfig(PIPELINE_CONFIG_DIR, PIPELINE_CONFIG_FILENAME)
+        config = get_sam_config(PIPELINE_CONFIG_DIR, PIPELINE_CONFIG_FILENAME)
         config_values = config.get_all(["pipeline", "bootstrap"], "parameters", stage_configuration_name)
         config_values = {**config_values, **config.get_all(["pipeline", "bootstrap"], "parameters")}
 
