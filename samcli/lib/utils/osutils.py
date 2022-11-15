@@ -9,6 +9,7 @@ import sys
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
+from subprocess import Popen, TimeoutExpired, PIPE
 from typing import List, Optional, Union
 
 LOG = logging.getLogger(__name__)
@@ -199,3 +200,27 @@ def create_symlink_or_copy(source: str, destination: str) -> None:
             exc_info=ex if LOG.isEnabledFor(logging.DEBUG) else None,
         )
         copytree(source, destination)
+
+
+def run_command(command_list, cwd=None, env=None, timeout=30) -> bool:
+    os_env = os.environ.copy()
+    os_env.update(env)
+    process_execute = Popen(command_list, cwd=cwd, env=os_env, shell=True, stdout=PIPE, stderr=PIPE)
+    try:
+        stdout_data, stderr_data = process_execute.communicate(timeout=timeout)
+        stdout_txt = stdout_data.decode('utf-8')
+        stderr_txt = stderr_data.decode('utf-8')
+        is_process_succeeded = process_execute.returncode == 0
+
+        if stdout_txt:
+            LOG.info(f"\n{stdout_txt}")
+
+        if not is_process_succeeded and stderr_txt:
+            LOG.info(f"\n{stderr_txt}")
+
+        return is_process_succeeded
+    except TimeoutExpired:
+        LOG.error(f"Command: {command_list}, TIMED OUT")
+        LOG.error(f"Return Code: {process_execute.returncode}")
+        process_execute.kill()
+        return False

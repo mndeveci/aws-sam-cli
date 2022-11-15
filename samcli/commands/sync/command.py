@@ -1,11 +1,12 @@
 """CLI command for "sync" command."""
 import os
 import logging
-from typing import List, Set, TYPE_CHECKING, Optional, Tuple
+from typing import List, Set, TYPE_CHECKING, Optional, Tuple, Any
 
 import click
 
 from samcli.cli.main import pass_context, common_options as cli_framework_options, aws_creds_options, print_cmdline_args
+from samcli.cli.types import SyncHookOptionType
 from samcli.commands._utils.cdk_support_decorators import unsupported_command_cdk
 from samcli.commands._utils.options import (
     s3_bucket_option,
@@ -127,6 +128,12 @@ DEFAULT_CAPABILITIES = ("CAPABILITY_NAMED_IAM", "CAPABILITY_AUTO_EXPAND")
     help="This option separates the dependencies of individual function into another layer, for speeding up the sync."
     "process",
 )
+@click.option(
+    "--sync-hook",
+    multiple=True,
+    type=SyncHookOptionType(),
+    help="Add command line functions to run after each sync action is completed"
+)
 @stack_name_option(required=True)  # pylint: disable=E1120
 @base_dir_option
 @use_container_build_option
@@ -159,6 +166,7 @@ def cli(
     resource_id: Optional[Tuple[str]],
     resource: Optional[Tuple[str]],
     dependency_layer: bool,
+    sync_hook: List[Any],
     stack_name: str,
     base_dir: Optional[str],
     parameter_overrides: dict,
@@ -189,6 +197,7 @@ def cli(
         resource_id,
         resource,
         dependency_layer,
+        sync_hook,
         stack_name,
         ctx.region,
         ctx.profile,
@@ -218,6 +227,7 @@ def do_cli(
     resource_id: Optional[Tuple[str]],
     resource: Optional[Tuple[str]],
     dependency_layer: bool,
+    sync_hooks: List[Any],
     stack_name: str,
     region: str,
     profile: str,
@@ -343,10 +353,18 @@ def do_cli(
                     poll_delay=poll_delay,
                     on_failure=None,
                 ) as deploy_context:
-                    with SyncContext(dependency_layer, build_context.build_dir, build_context.cache_dir):
+                    with SyncContext(
+                            dependency_layer, build_context.build_dir, build_context.cache_dir, sync_hooks
+                    ) as sync_context:
                         if watch:
                             execute_watch(
-                                template_file, build_context, package_context, deploy_context, dependency_layer, code
+                                template_file,
+                                build_context,
+                                package_context,
+                                deploy_context,
+                                sync_context,
+                                dependency_layer,
+                                code
                             )
                         elif code:
                             execute_code_sync(
@@ -430,6 +448,7 @@ def execute_watch(
     build_context: "BuildContext",
     package_context: "PackageContext",
     deploy_context: "DeployContext",
+    sync_context: SyncContext,
     auto_dependency_layer: bool,
     skip_infra_syncs: bool,
 ):
@@ -447,7 +466,7 @@ def execute_watch(
         DeployContext
     """
     watch_manager = WatchManager(
-        template, build_context, package_context, deploy_context, auto_dependency_layer, skip_infra_syncs
+        template, build_context, package_context, deploy_context, sync_context, auto_dependency_layer, skip_infra_syncs
     )
     watch_manager.start()
 

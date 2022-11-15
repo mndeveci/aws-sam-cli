@@ -9,6 +9,8 @@ from contextlib import ExitStack
 
 from typing import Any, Dict, List, Optional, TYPE_CHECKING, cast
 
+from samcli.commands.sync.sync_context import SyncContext
+from samcli.commands.sync.sync_hook import SyncHook
 from samcli.lib.build.build_graph import BuildGraph
 from samcli.lib.providers.provider import Stack
 
@@ -44,6 +46,7 @@ class ZipFunctionSyncFlow(FunctionSyncFlow):
         function_identifier: str,
         build_context: "BuildContext",
         deploy_context: "DeployContext",
+        sync_context: SyncContext,
         physical_id_mapping: Dict[str, str],
         stacks: List[Stack],
     ):
@@ -62,7 +65,7 @@ class ZipFunctionSyncFlow(FunctionSyncFlow):
         stacks : Optional[List[Stack]]
             Stacks
         """
-        super().__init__(function_identifier, build_context, deploy_context, physical_id_mapping, stacks)
+        super().__init__(function_identifier, build_context, deploy_context, sync_context, physical_id_mapping, stacks)
         self._s3_client = None
         self._artifact_folder = None
         self._zip_file = None
@@ -202,3 +205,11 @@ class ZipFunctionSyncFlow(FunctionSyncFlow):
     @staticmethod
     def _combine_dependencies() -> bool:
         return True
+
+    def get_hooks(self) -> List[SyncHook]:
+        for hook in self._sync_context.sync_hooks:
+            if hook.logical_id == self._function_identifier:
+                yield hook
+
+    def get_hooks_environment(self) -> Dict[str, str]:
+        return {"LOGICAL_ID": self._function_identifier, "PHYSICAL_ID": self.get_physical_id(self._function_identifier)}

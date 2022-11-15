@@ -4,12 +4,13 @@ Context object used by sync command
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, cast, Dict
+from typing import Optional, cast, Dict, List
 
 import tomlkit
 from tomlkit.api import _TOMLDocument as TOMLDocument
 from tomlkit.items import Item
 
+from samcli.commands.sync.sync_hook import SyncHook
 from samcli.lib.build.build_graph import DEFAULT_DEPENDENCIES_DIR
 from samcli.lib.utils.osutils import rmtree_if_exists
 
@@ -56,13 +57,15 @@ class SyncContext:
     _build_dir: Path
     _cache_dir: Path
     _file_path: Path
+    _sync_hooks: List[SyncHook]
 
-    def __init__(self, dependency_layer: bool, build_dir: str, cache_dir: str):
+    def __init__(self, dependency_layer: bool, build_dir: str, cache_dir: str, sync_hooks: List[SyncHook]):
         self._current_state = SyncState(dependency_layer)
         self._previous_state = None
         self._build_dir = Path(build_dir)
         self._cache_dir = Path(cache_dir)
         self._file_path = Path(build_dir).parent.joinpath(DEFAULT_SYNC_STATE_FILE_NAME)
+        self._sync_hooks = sync_hooks
 
     def __enter__(self) -> "SyncContext":
         self._read()
@@ -90,6 +93,10 @@ class SyncContext:
             self._previous_state = _toml_document_to_sync_state(toml_document)
         except OSError:
             LOG.debug("Missing previous sync state, will create a new file at the end of this execution")
+
+    @property
+    def sync_hooks(self):
+        return self._sync_hooks
 
     def _cleanup_build_folders(self):
         """

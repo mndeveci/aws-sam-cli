@@ -8,12 +8,15 @@ from threading import Lock
 from typing import Any, Dict, List, NamedTuple, Optional, TYPE_CHECKING, cast, Set
 from boto3.session import Session
 
+from samcli.commands.sync.sync_context import SyncContext
+from samcli.commands.sync.sync_hook import SyncHook
 from samcli.lib.providers.provider import get_resource_by_id
 
 from samcli.lib.providers.provider import ResourceIdentifier, Stack
 from samcli.lib.utils.boto_utils import get_boto_client_provider_from_session_with_config
 from samcli.lib.utils.lock_distributor import LockDistributor, LockChain
 from samcli.lib.sync.exceptions import MissingLockException, MissingPhysicalResourceError
+from samcli.lib.utils.osutils import run_command
 
 if TYPE_CHECKING:  # pragma: no cover
     from samcli.commands.deploy.deploy_context import DeployContext
@@ -45,6 +48,7 @@ class SyncFlow(ABC):
     _log_name: str
     _build_context: "BuildContext"
     _deploy_context: "DeployContext"
+    _sync_context: SyncContext
     _stacks: Optional[List[Stack]]
     _session: Optional[Session]
     _physical_id_mapping: Dict[str, str]
@@ -54,6 +58,7 @@ class SyncFlow(ABC):
         self,
         build_context: "BuildContext",
         deploy_context: "DeployContext",
+        sync_context: SyncContext,
         physical_id_mapping: Dict[str, str],
         log_name: str,
         stacks: Optional[List[Stack]] = None,
@@ -74,6 +79,7 @@ class SyncFlow(ABC):
         """
         self._build_context = build_context
         self._deploy_context = deploy_context
+        self._sync_context = sync_context
         self._log_name = log_name
         self._stacks = stacks
         self._session = None
@@ -294,6 +300,19 @@ class SyncFlow(ABC):
         """
         return f"SyncFlow [{self.log_name}]: "
 
+    def get_hooks(self) -> List[SyncHook]:
+        return []
+
+    def get_hooks_environment(self) -> Dict[str, str]:
+        return {}
+
+    def execute_hooks(self) -> None:
+        hooks = self.get_hooks()
+        if hooks:
+            LOG.info("%sExecuting hooks", self.log_prefix)
+        for hook in hooks:
+            run_command(hook.action, env=self.get_hooks_environment())
+
     def execute(self) -> List["SyncFlow"]:
         """Execute the sync flow and returns a list of dependent sync flows.
         Skips sync() and gather_dependencies() if compare() is True
@@ -315,6 +334,7 @@ class SyncFlow(ABC):
             LOG.debug("%sGathering Dependencies", self.log_prefix)
             dependencies = self.gather_dependencies()
         LOG.debug("%sFinished", self.log_prefix)
+        self.execute_hooks()
         return dependencies
 
 

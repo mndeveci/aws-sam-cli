@@ -8,6 +8,7 @@ import threading
 from pathlib import Path
 from typing import List, Optional, TYPE_CHECKING
 
+from samcli.commands.sync.sync_context import SyncContext
 from samcli.lib.utils.colors import Colored
 from samcli.lib.providers.exceptions import MissingCodeUri, MissingLocalDefinition, InvalidTemplateFile
 
@@ -36,6 +37,7 @@ class WatchManager:
     _build_context: "BuildContext"
     _package_context: "PackageContext"
     _deploy_context: "DeployContext"
+    _sync_context: SyncContext
     _sync_flow_factory: Optional[SyncFlowFactory]
     _sync_flow_executor: ContinuousSyncFlowExecutor
     _executor_thread: Optional[threading.Thread]
@@ -52,6 +54,7 @@ class WatchManager:
         build_context: "BuildContext",
         package_context: "PackageContext",
         deploy_context: "DeployContext",
+        sync_context: SyncContext,
         auto_dependency_layer: bool,
         skip_infra_syncs: bool,
     ):
@@ -75,6 +78,7 @@ class WatchManager:
         self._build_context = build_context
         self._package_context = package_context
         self._deploy_context = deploy_context
+        self._sync_context = sync_context
         self._auto_dependency_layer = auto_dependency_layer
         self._skip_infra_syncs = skip_infra_syncs
 
@@ -110,7 +114,7 @@ class WatchManager:
         """
         self._stacks = SamLocalStackProvider.get_stacks(self._template)[0]
         self._sync_flow_factory = SyncFlowFactory(
-            self._build_context, self._deploy_context, self._stacks, self._auto_dependency_layer
+            self._build_context, self._deploy_context, self._sync_context, self._stacks, self._auto_dependency_layer
         )
         self._sync_flow_factory.load_physical_id_mapping()
         self._trigger_factory = CodeTriggerFactory(self._stacks, Path(self._build_context.base_dir))

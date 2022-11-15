@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
+from samcli.commands.sync.sync_context import SyncContext
 from samcli.lib.sync.sync_flow import SyncFlow, ResourceAPICall, get_definition_path
 from samcli.lib.providers.provider import Stack, get_resource_by_id, ResourceIdentifier
 
@@ -29,6 +30,7 @@ class GenericApiSyncFlow(SyncFlow):
         api_identifier: str,
         build_context: "BuildContext",
         deploy_context: "DeployContext",
+        sync_context: SyncContext,
         physical_id_mapping: Dict[str, str],
         log_name: str,
         stacks: List[Stack],
@@ -52,6 +54,7 @@ class GenericApiSyncFlow(SyncFlow):
         super().__init__(
             build_context,
             deploy_context,
+            sync_context,
             physical_id_mapping,
             log_name=log_name,
             stacks=stacks,

@@ -2,6 +2,7 @@
 import logging
 from typing import Dict, List, TYPE_CHECKING
 
+from samcli.commands.sync.sync_context import SyncContext
 from samcli.lib.sync.flows.generic_api_sync_flow import GenericApiSyncFlow
 from samcli.lib.providers.provider import ResourceIdentifier, Stack
 from samcli.lib.providers.exceptions import MissingLocalDefinition
@@ -23,6 +24,7 @@ class HttpApiSyncFlow(GenericApiSyncFlow):
         api_identifier: str,
         build_context: "BuildContext",
         deploy_context: "DeployContext",
+        sync_context: SyncContext,
         physical_id_mapping: Dict[str, str],
         stacks: List[Stack],
     ):
@@ -44,6 +46,7 @@ class HttpApiSyncFlow(GenericApiSyncFlow):
             api_identifier,
             build_context,
             deploy_context,
+            sync_context,
             physical_id_mapping,
             log_name="HttpApi " + api_identifier,
             stacks=stacks,

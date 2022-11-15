@@ -8,6 +8,7 @@ import tempfile
 import uuid
 from typing import List, TYPE_CHECKING, Dict, cast, Optional
 
+from samcli.commands.sync.sync_context import SyncContext
 from samcli.lib.bootstrap.nested_stack.nested_stack_builder import NestedStackBuilder
 from samcli.lib.bootstrap.nested_stack.nested_stack_manager import NestedStackManager
 from samcli.lib.build.build_graph import BuildGraph
@@ -49,6 +50,7 @@ class AutoDependencyLayerSyncFlow(AbstractLayerSyncFlow):
         build_graph: BuildGraph,
         build_context: "BuildContext",
         deploy_context: "DeployContext",
+        sync_context: SyncContext,
         physical_id_mapping: Dict[str, str],
         stacks: List[Stack],
     ):
@@ -56,6 +58,7 @@ class AutoDependencyLayerSyncFlow(AbstractLayerSyncFlow):
             NestedStackBuilder.get_layer_logical_id(function_identifier),
             build_context,
             deploy_context,
+            sync_context,
             physical_id_mapping,
             stacks,
         )
@@ -126,6 +129,7 @@ class AutoDependencyLayerParentSyncFlow(ZipFunctionSyncFlow):
                     cast(BuildGraph, self._build_graph),
                     self._build_context,
                     self._deploy_context,
+                    self._sync_context,
                     self._physical_id_mapping,
                     cast(List[Stack], self._stacks),
                 )

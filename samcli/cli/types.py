@@ -5,9 +5,11 @@ Implementation of custom click parameter types
 import re
 import json
 from json import JSONDecodeError
+from typing import List, Dict
 
 import click
 
+from samcli.commands.sync.sync_hook import SyncHook, SyncHookType
 from samcli.lib.package.ecr_utils import is_ecr_url
 
 PARAM_AND_METADATA_KEY_REGEX = """([A-Za-z0-9\\"\']+)"""
@@ -422,3 +424,18 @@ class ImageRepositoriesType(click.ParamType):
         if not is_ecr_url(_value):
             raise click.BadParameter(f"{param.opts[0]} needs to have valid ECR URI as value")
         return {key: _value}
+
+
+class SyncHookOptionType(click.ParamType):
+    """
+    Custom parameter type for hook action for individual sync
+    """
+
+    name = ""
+
+    def convert(self, value, param, ctx):
+        sync_name, hook_action = value.split("=", 1)
+        hook_action = hook_action.replace("\"", "").replace("'", "")
+        hook_type = SyncHookType.Infra if sync_name == SyncHookType.Infra.name else SyncHookType.Code
+
+        return SyncHook(hook_type, sync_name, hook_action)

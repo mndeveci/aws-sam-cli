@@ -5,6 +5,7 @@ from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING, cast
 from botocore.exceptions import ClientError
 
 from samcli.commands.exceptions import InvalidStackNameException
+from samcli.commands.sync.sync_context import SyncContext
 from samcli.lib.bootstrap.nested_stack.nested_stack_manager import NestedStackManager
 from samcli.lib.providers.provider import Stack, get_resource_by_id, ResourceIdentifier
 from samcli.lib.sync.flows.auto_dependency_layer_sync_flow import AutoDependencyLayerParentSyncFlow
@@ -81,6 +82,7 @@ class SyncFlowFactory(ResourceTypeBasedFactory[SyncFlow]):  # pylint: disable=E1
 
     _deploy_context: "DeployContext"
     _build_context: "BuildContext"
+    _sync_context: SyncContext
     _physical_id_mapping: Dict[str, str]
     _auto_dependency_layer: bool
 
@@ -88,6 +90,7 @@ class SyncFlowFactory(ResourceTypeBasedFactory[SyncFlow]):  # pylint: disable=E1
         self,
         build_context: "BuildContext",
         deploy_context: "DeployContext",
+        sync_context: SyncContext,
         stacks: List[Stack],
         auto_dependency_layer: bool,
     ) -> None:
@@ -104,6 +107,7 @@ class SyncFlowFactory(ResourceTypeBasedFactory[SyncFlow]):  # pylint: disable=E1
         super().__init__(stacks)
         self._deploy_context = deploy_context
         self._build_context = build_context
+        self._sync_context = sync_context
         self._auto_dependency_layer = auto_dependency_layer
         self._physical_id_mapping = dict()
 
@@ -149,6 +153,7 @@ class SyncFlowFactory(ResourceTypeBasedFactory[SyncFlow]):  # pylint: disable=E1
                     str(resource_identifier),
                     self._build_context,
                     self._deploy_context,
+                    self._sync_context,
                     self._physical_id_mapping,
                     self._stacks,
                 )
@@ -157,6 +162,7 @@ class SyncFlowFactory(ResourceTypeBasedFactory[SyncFlow]):  # pylint: disable=E1
                 str(resource_identifier),
                 self._build_context,
                 self._deploy_context,
+                self._sync_context,
                 self._physical_id_mapping,
                 self._stacks,
             )
@@ -165,6 +171,7 @@ class SyncFlowFactory(ResourceTypeBasedFactory[SyncFlow]):  # pylint: disable=E1
                 str(resource_identifier),
                 self._build_context,
                 self._deploy_context,
+                self._sync_context,
                 self._physical_id_mapping,
                 self._stacks,
             )
@@ -175,6 +182,7 @@ class SyncFlowFactory(ResourceTypeBasedFactory[SyncFlow]):  # pylint: disable=E1
             str(resource_identifier),
             self._build_context,
             self._deploy_context,
+            self._sync_context,
             self._physical_id_mapping,
             self._stacks,
         )
@@ -184,6 +192,7 @@ class SyncFlowFactory(ResourceTypeBasedFactory[SyncFlow]):  # pylint: disable=E1
             str(resource_identifier),
             self._build_context,
             self._deploy_context,
+            self._sync_context,
             self._physical_id_mapping,
             self._stacks,
         )
@@ -193,6 +202,7 @@ class SyncFlowFactory(ResourceTypeBasedFactory[SyncFlow]):  # pylint: disable=E1
             str(resource_identifier),
             self._build_context,
             self._deploy_context,
+            self._sync_context,
             self._physical_id_mapping,
             self._stacks,
         )
@@ -204,6 +214,7 @@ class SyncFlowFactory(ResourceTypeBasedFactory[SyncFlow]):  # pylint: disable=E1
             str(resource_identifier),
             self._build_context,
             self._deploy_context,
+            self._sync_context,
             self._physical_id_mapping,
             self._stacks,
         )

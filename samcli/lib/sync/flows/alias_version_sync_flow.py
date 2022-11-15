@@ -2,6 +2,7 @@
 import logging
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
+from samcli.commands.sync.sync_context import SyncContext
 from samcli.lib.providers.provider import Stack
 from samcli.lib.sync.sync_flow import SyncFlow, ResourceAPICall
 
@@ -27,6 +28,7 @@ class AliasVersionSyncFlow(SyncFlow):
         alias_name: str,
         build_context: "BuildContext",
         deploy_context: "DeployContext",
+        sync_context: SyncContext,
         physical_id_mapping: Dict[str, str],
         stacks: Optional[List[Stack]] = None,
     ):
@@ -49,6 +51,7 @@ class AliasVersionSyncFlow(SyncFlow):
         super().__init__(
             build_context,
             deploy_context,
+            sync_context,
             physical_id_mapping,
             log_name=f"Alias {alias_name} and Version of {function_identifier}",
             stacks=stacks,
