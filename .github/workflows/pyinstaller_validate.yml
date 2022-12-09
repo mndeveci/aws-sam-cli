@@ -1,9 +1,9 @@
 name: Validate Pyinstaller Build
 
 on:
-  schedule:
-    - cron: "0 * * * *" # run at the top of every hour
-  workflow_dispatch: {}
+  push:
+    branches:
+      - "pyinstaller_validate_gha"
 
 jobs:
   build:
