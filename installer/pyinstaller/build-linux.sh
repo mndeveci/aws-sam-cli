@@ -23,7 +23,12 @@ fi
 
 set -eu
 
-yum install -y zlib-devel openssl-devel libffi-devel
+if [ $USE_UBUNTU == "1" ]
+then
+  apt install -y zlib-devel openssl-devel libffi-devel
+else
+  yum install -y zlib-devel openssl-devel libffi-devel
+fi
 
 echo "Making Folders"
 mkdir -p .build/src
@@ -97,7 +102,12 @@ cd ..
 cp -r src/pyinstaller-output/* output/pyinstaller-output
 
 echo "Packaging Binary"
-yum install -y zip
+if [ $USE_UBUNTU == "1" ]
+then
+  apt install -y zip
+else
+  yum install -y zip
+fi
 cd output
 cd pyinstaller-output
 cd dist
