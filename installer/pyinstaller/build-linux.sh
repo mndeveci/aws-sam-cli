@@ -54,9 +54,8 @@ if ! [ "$USE_UBUNTU" = "1" ]; then
   make -j8
   make install
   ldconfig
+  cd ..
 fi
-cd ..
-ls -ltra
 
 echo "Installing Python Libraries"
 python3 -m venv venv
