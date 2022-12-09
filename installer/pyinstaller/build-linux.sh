@@ -22,6 +22,7 @@ else
 fi
 
 set -eu
+set -x
 
 if [ "$USE_UBUNTU" = "1" ]; then
   # sudo apt install -y zlib-devel openssl-devel libffi-devel
