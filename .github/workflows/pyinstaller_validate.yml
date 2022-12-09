@@ -1,0 +1,17 @@
+name: Validate Pyinstaller Build
+
+on:
+  schedule:
+    - cron: "0 * * * *" # run at the top of every hour
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    name: build-pyinstaller
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.7"
+      - run: ./installer/pyinstaller/build-linux.sh
