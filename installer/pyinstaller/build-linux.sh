@@ -79,7 +79,7 @@ echo "samcli.spec content is:"
 cat installer/pyinstaller/samcli.spec
 # --onedir/--onefile options not allowed when spec file provided for
 # updated pyinstaller version.
-../venv/bin/pyinstaller --clean --log-level=DEBUG --debug=all installer/pyinstaller/samcli.spec
+../venv/bin/pyinstaller --clean --log-level=DEBUG installer/pyinstaller/samcli.spec
 
 
 mkdir pyinstaller-output
