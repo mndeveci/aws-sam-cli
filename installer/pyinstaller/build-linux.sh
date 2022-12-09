@@ -45,14 +45,16 @@ cp -r ./src/* ./output/aws-sam-cli-src
 echo "Removing CI Scripts"
 rm -vf ./output/aws-sam-cli-src/appveyor*.yml
 
-echo "Installing Python"
-curl "https://www.python.org/ftp/python/${python_version}/Python-${python_version}.tgz" --output python.tgz
-tar -xzf python.tgz
-cd Python-$python_version
-./configure --enable-shared
-make -j8
-make install
-ldconfig
+if ! [ "$USE_UBUNTU" = "1" ]; then
+  echo "Installing Python"
+  curl "https://www.python.org/ftp/python/${python_version}/Python-${python_version}.tgz" --output python.tgz
+  tar -xzf python.tgz
+  cd Python-$python_version
+  ./configure --enable-shared
+  make -j8
+  make install
+  ldconfig
+fi
 cd ..
 
 echo "Installing Python Libraries"
