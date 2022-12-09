@@ -23,7 +23,7 @@ fi
 
 set -eu
 
-if [ "$USE_UBUNTU" == "1" ]
+if [ "$USE_UBUNTU" == 1 ]
 then
   apt install -y zlib-devel openssl-devel libffi-devel
 else
@@ -102,7 +102,7 @@ cd ..
 cp -r src/pyinstaller-output/* output/pyinstaller-output
 
 echo "Packaging Binary"
-if [ "$USE_UBUNTU" == "1" ]
+if [ "$USE_UBUNTU" == 1 ]
 then
   apt install -y zip
 else
