@@ -23,9 +23,8 @@ fi
 
 set -eu
 
-if [ "$USE_UBUNTU" = "1" ];
-then
-  apt install -y zlib-devel openssl-devel libffi-devel
+if [ "$USE_UBUNTU" = "1" ]; then
+  sudo apt install -y zlib-devel openssl-devel libffi-devel
 else
   yum install -y zlib-devel openssl-devel libffi-devel
 fi
@@ -102,9 +101,8 @@ cd ..
 cp -r src/pyinstaller-output/* output/pyinstaller-output
 
 echo "Packaging Binary"
-if [ "$USE_UBUNTU" = "1" ];
-then
-  apt install -y zip
+if [ "$USE_UBUNTU" = "1" ]; then
+  sudo apt install -y zip
 else
   yum install -y zip
 fi
