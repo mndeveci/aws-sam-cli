@@ -24,7 +24,8 @@ fi
 set -eu
 
 if [ "$USE_UBUNTU" = "1" ]; then
-  sudo apt install -y zlib-devel openssl-devel libffi-devel
+  # sudo apt install -y zlib-devel openssl-devel libffi-devel
+  echo "skip to see if we really need it"
 else
   yum install -y zlib-devel openssl-devel libffi-devel
 fi
