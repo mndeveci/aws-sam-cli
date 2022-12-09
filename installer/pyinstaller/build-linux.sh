@@ -56,6 +56,7 @@ if ! [ "$USE_UBUNTU" = "1" ]; then
   ldconfig
 fi
 cd ..
+ls -ltra
 
 echo "Installing Python Libraries"
 python3 -m venv venv
