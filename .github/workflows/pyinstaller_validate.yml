@@ -16,7 +16,6 @@ jobs:
           python-version: "3.7"
       - run: chmod +x ./installer/pyinstaller/build-linux.sh
       - run: USE_UBUNTU=1 ./installer/pyinstaller/build-linux.sh
-      - run: ls -ltra .build
       - uses: actions/upload-artifact@v3
         with:
           name: pyinstaller-output
