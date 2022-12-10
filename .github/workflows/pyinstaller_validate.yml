@@ -16,4 +16,4 @@ jobs:
           python-version: "3.7"
       - run: chmod +x ./installer/pyinstaller/build-linux.sh
       - run: USE_UBUNTU=1 ./installer/pyinstaller/build-linux.sh
-      - run: ls -ltra
+      - run: ls -ltra .build
