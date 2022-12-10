@@ -80,8 +80,7 @@ cat installer/pyinstaller/samcli.spec
 # --onedir/--onefile options not allowed when spec file provided for
 # updated pyinstaller version.
 ../venv/bin/python -m PyInstaller --clean --log-level=DEBUG installer/pyinstaller/samcli.spec | tee pyinstaller_output.log
-cat pyinstaller_output.log | grep "hidden" > pyinstaller_hidden.log
-cat pyinstaller_hidden.log
+cat pyinstaller_output.log | grep "hidden"
 
 
 mkdir pyinstaller-output
