@@ -19,5 +19,5 @@ jobs:
       - run: ls -ltra .build
       - uses: actions/upload-artifact@v3
         with:
-        name: pyinstaller-output
-        path: .build/pyinstaller_output.log
+          name: pyinstaller-output
+          path: .build/pyinstaller_output.log
