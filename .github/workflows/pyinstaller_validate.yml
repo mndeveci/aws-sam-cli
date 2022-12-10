@@ -18,7 +18,9 @@ jobs:
       - run: USE_UBUNTU=1 ./installer/pyinstaller/build-linux.sh
       - uses: actions/upload-artifact@v3
         with:
-          - name: pyinstaller-output
-            path: .build/pyinstaller_output.log
-          - name: pyinstaller-warnings
-            path: .build/src/build/samcli/warn-samcli.txt
+          name: pyinstaller-output
+          path: .build/pyinstaller_output.log
+      - uses: actions/upload-artifact@v3
+        with:
+          name: pyinstaller-warnings
+          path: .build/src/build/samcli/warn-samcli.txt
