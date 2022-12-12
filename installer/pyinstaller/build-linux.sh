@@ -79,7 +79,7 @@ echo "samcli.spec content is:"
 cat installer/pyinstaller/samcli.spec
 # --onedir/--onefile options not allowed when spec file provided for
 # updated pyinstaller version.
-../venv/bin/python -m PyInstaller --clean --log-level=DEBUG --additional-hooks-dir './installer/pyinstaller' -d imports ../../samcli/__main__.py 2>&1 | tee ../pyinstaller_output.log
+../venv/bin/python -m PyInstaller --clean --log-level=DEBUG --additional-hooks-dir './installer/pyinstaller' --debug=imports ../../samcli/__main__.py 2>&1 | tee ../pyinstaller_output.log
 
 
 mkdir pyinstaller-output
