@@ -9,6 +9,8 @@ jobs:
   build:
     name: build-pyinstaller
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
