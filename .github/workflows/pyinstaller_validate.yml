@@ -24,3 +24,7 @@ jobs:
         with:
           name: pyinstaller-warnings
           path: .build/src/build/samcli/warn-samcli.txt
+      - uses: actions/upload-artifact@v3
+        with:
+          name: pyinstaller-spec
+          path: .build/src/__main__.spec
