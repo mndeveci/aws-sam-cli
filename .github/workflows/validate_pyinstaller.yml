@@ -1,14 +1,15 @@
 name: Validate Pyinstaller Build
 
 on:
-  push:
+  pull_request:
     branches:
-      - "py_installer_gha_ci"
+      - develop
 
 jobs:
   build:
     name: build-pyinstaller
     runs-on: ubuntu-latest
+    if: github.repository_owner == 'aws'
     strategy:
       fail-fast: false
     steps:
