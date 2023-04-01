@@ -11,6 +11,7 @@ from copy import deepcopy
 from typing import Callable, Dict, List, Any, Optional, cast, Set, Tuple, TypeVar
 
 from samcli.commands._utils.experimental import is_experimental_enabled, ExperimentalFlag
+from samcli.lib.build.workflow_config import get_workflow_config
 from samcli.lib.utils import osutils
 from samcli.lib.utils.async_utils import AsyncContext
 from samcli.lib.utils.hash import dir_checksum
@@ -241,6 +242,8 @@ class CachedBuildStrategy(BuildStrategy):
     For actual building, it uses delegate implementation
     """
 
+    NOT_SUPPORTED = { "go" }
+
     def __init__(
         self,
         build_graph: BuildGraph,
@@ -266,6 +269,10 @@ class CachedBuildStrategy(BuildStrategy):
         Builds single function definition with caching
         """
         if build_definition.packagetype == IMAGE:
+            return self._delegate_build_strategy.build_single_function_definition(build_definition)
+
+        if self._is_not_supported(build_definition):
+            LOG.debug("Build definition %s does not support cached builds", build_definition)
             return self._delegate_build_strategy.build_single_function_definition(build_definition)
 
         code_dir = str(pathlib.Path(self._base_dir, cast(str, build_definition.codeuri)).resolve())
@@ -320,6 +327,16 @@ class CachedBuildStrategy(BuildStrategy):
                     function_build_results[function.full_path] = artifacts_dir
 
         return function_build_results
+
+    def _is_not_supported(self, build_definition):
+        specified_workflow = build_definition.metadata.get("BuildMethod", None) if build_definition.metadata else None
+        config = get_workflow_config(
+            build_definition.runtime,
+            build_definition.codeuri,
+            self._base_dir,
+            specified_workflow=specified_workflow
+        )
+        return config.language in CachedBuildStrategy.NOT_SUPPORTED
 
     def build_single_layer_definition(self, layer_definition: LayerBuildDefinition) -> Dict[str, str]:
         """
