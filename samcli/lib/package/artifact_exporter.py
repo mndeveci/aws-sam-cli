@@ -15,6 +15,7 @@ Exporting resources defined in the cloudformation template to the cloud.
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 import os
+import shutil
 from typing import Dict, List, Optional
 
 from botocore.utils import set_value_from_jmespath
@@ -274,7 +275,8 @@ class Template:
 
         self._apply_global_values()
         self.template_dict = self._export_global_artifacts(self.template_dict)
-
+        transfer_futures = []
+        tmp_dirs = []
         for resource_logical_id, resource in self.template_dict["Resources"].items():
             resource_type = resource.get("Type", None)
             resource_dict = resource.get("Properties", {})
@@ -288,7 +290,17 @@ class Template:
                     continue
                 # Export code resources
                 exporter = exporter_class(self.uploaders, self.code_signer)
-                exporter.export(full_path, resource_dict, self.template_dir)
+                ((transfer_future, tmp_dir), tmp_file) = exporter.export(full_path, resource_dict, self.template_dir)
+                transfer_futures.append(transfer_future)
+                tmp_dirs.append(tmp_dir)
+                tmp_dirs.append(tmp_file)
+
+        for transfer_future in transfer_futures:
+            transfer_future.result()
+
+        for tmp_dir in tmp_dirs:
+            if tmp_dir:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
 
         return self.template_dict
 

@@ -26,6 +26,9 @@ from urllib.parse import parse_qs, urlparse
 import botocore
 import botocore.exceptions
 from boto3.s3 import transfer
+from boto3.s3.transfer import ProgressCallbackInvoker
+from s3transfer.futures import TransferFuture
+from tqdm import tqdm
 
 from samcli.commands.package.exceptions import BucketNotSpecifiedError, NoSuchBucketError
 from samcli.lib.package.local_files_utils import get_uploaded_s3_object_name
@@ -70,8 +73,9 @@ class S3Uploader:
         self.transfer_manager = transfer.create_transfer_manager(self.s3, transfer.TransferConfig())
 
         self._artifact_metadata = None
+        self._uploads = {}
 
-    def upload(self, file_name: str, remote_path: str) -> str:
+    def upload(self, file_name: str, remote_path: str) -> (TransferFuture, str):
         """
         Uploads given file to S3
         :param file_name: Path to the file that will be uploaded
@@ -103,15 +107,17 @@ class S3Uploader:
                 raise BucketNotSpecifiedError()
 
             if not self.no_progressbar:
-                print_progress_callback = ProgressPercentage(file_name, remote_path)
-                future = self.transfer_manager.upload(
-                    file_name, self.bucket_name, remote_path, additional_args, [print_progress_callback]
-                )
+                with tqdm(desc=remote_path, ncols=80, total=os.path.getsize(file_name), unit='B', unit_scale=1) as pbar:
+                    future = self.transfer_manager.upload(
+                        file_name, self.bucket_name, remote_path, additional_args, [
+                            ProgressCallbackInvoker(pbar.update)
+                        ]
+                    )
+                    future.result()
             else:
                 future = self.transfer_manager.upload(file_name, self.bucket_name, remote_path, additional_args)
-            future.result()
 
-            return self.make_url(remote_path)
+            return future, self.make_url(remote_path)
 
         except botocore.exceptions.ClientError as ex:
             error_code = ex.response["Error"]["Code"]
@@ -121,7 +127,7 @@ class S3Uploader:
 
     def upload_with_dedup(
         self, file_name: str, extension: Optional[str] = None, precomputed_md5: Optional[str] = None
-    ) -> str:
+    ) -> (TransferFuture, str):
         """
         Makes and returns name of the S3 object based on the file's MD5 sum
 

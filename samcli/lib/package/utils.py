@@ -9,10 +9,12 @@ import re
 import shutil
 import tempfile
 import zipfile
+from concurrent.futures import Future
 from contextlib import contextmanager
 from typing import Callable, Dict, List, Optional, cast
 
 import jmespath
+from s3transfer.futures import TransferFuture
 
 from samcli.commands.package.exceptions import ImageNotFoundError, InvalidLocalPathError
 from samcli.lib.package.ecr_utils import is_ecr_url
@@ -134,7 +136,7 @@ def upload_local_artifacts(
     parent_dir: str,
     uploader: S3Uploader,
     extension: Optional[str] = None,
-) -> str:
+) -> ((TransferFuture, str), str):
     """
     Upload local artifacts referenced by the property at given resource and
     return S3 URL of the uploaded object. It is the responsibility of callers
@@ -199,9 +201,9 @@ def resource_not_packageable(resource_dict):
     return False
 
 
-def zip_and_upload(local_path: str, uploader: S3Uploader, extension: Optional[str], zip_method: Callable) -> str:
+def zip_and_upload(local_path: str, uploader: S3Uploader, extension: Optional[str], zip_method: Callable) -> ((TransferFuture, str), str):
     with zip_folder(local_path, zip_method=zip_method) as (zip_file, md5_hash):
-        return uploader.upload_with_dedup(zip_file, precomputed_md5=md5_hash, extension=extension)
+        return uploader.upload_with_dedup(zip_file, precomputed_md5=md5_hash, extension=extension), zip_file
 
 
 @contextmanager
@@ -228,11 +230,7 @@ def zip_folder(folder_path, zip_method):
     filename = os.path.join(tempfile.gettempdir(), "data-" + md5hash)
 
     zipfile_name = zip_method(filename, folder_path)
-    try:
-        yield zipfile_name, md5hash
-    finally:
-        if os.path.exists(zipfile_name):
-            os.remove(zipfile_name)
+    yield zipfile_name, md5hash
 
 
 def make_zip_with_permissions(file_name, source_root, permission_mappers: List[PermissionMapper]):

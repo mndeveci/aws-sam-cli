@@ -8,6 +8,7 @@ from typing import Dict, Optional, Union
 
 import jmespath
 from botocore.utils import set_value_from_jmespath
+from s3transfer.futures import TransferFuture
 
 from samcli.commands.package import exceptions
 from samcli.lib.package.ecr_uploader import ECRUploader
@@ -98,7 +99,7 @@ class ResourceZip(Resource):
     ARTIFACT_TYPE = ZIP
     EXPORT_DESTINATION = Destination.S3
 
-    def export(self, resource_id: str, resource_dict: Optional[Dict], parent_dir: str):
+    def export(self, resource_id: str, resource_dict: Optional[Dict], parent_dir: str) -> ((TransferFuture, str), str):
         if resource_dict is None:
             return
 
@@ -122,18 +123,15 @@ class ResourceZip(Resource):
             set_value_from_jmespath(resource_dict, self.PROPERTY_NAME, temp_dir)
 
         try:
-            self.do_export(resource_id, resource_dict, parent_dir)
+            return self.do_export(resource_id, resource_dict, parent_dir), temp_dir
 
         except Exception as ex:
             LOG.debug("Unable to export", exc_info=ex)
             raise exceptions.ExportFailedError(
                 resource_id=resource_id, property_name=self.PROPERTY_NAME, property_value=property_value, ex=ex
             )
-        finally:
-            if temp_dir:
-                shutil.rmtree(temp_dir)
 
-    def do_export(self, resource_id, resource_dict, parent_dir):
+    def do_export(self, resource_id, resource_dict, parent_dir) -> TransferFuture:
         """
         Default export action is to upload artifacts and set the property to
         S3 URL of the uploaded object
@@ -144,7 +142,7 @@ class ResourceZip(Resource):
         # so package artifact with '.zip' if it is required to be signed
         should_sign_package = self.code_signer.should_sign_package(resource_id)
         artifact_extension = "zip" if should_sign_package else None
-        uploaded_url = upload_local_artifacts(
+        ((transfer_future, uploaded_url), tmp_file) = upload_local_artifacts(
             self.RESOURCE_TYPE,
             resource_id,
             resource_dict,
@@ -158,6 +156,7 @@ class ResourceZip(Resource):
                 resource_id, uploaded_url, self.uploader.get_version_of_artifact(uploaded_url)
             )
         set_value_from_jmespath(resource_dict, self.PROPERTY_NAME, uploaded_url)
+        return transfer_future, tmp_file
 
     def delete(self, resource_id, resource_dict):
         """
