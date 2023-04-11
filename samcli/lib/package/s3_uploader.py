@@ -107,7 +107,7 @@ class S3Uploader:
                 raise BucketNotSpecifiedError()
 
             if not self.no_progressbar:
-                with tqdm(desc=remote_path, ncols=80, total=os.path.getsize(file_name), unit='B', unit_scale=1) as pbar:
+                with tqdm(desc="upload", ncols=60, total=os.path.getsize(file_name), unit='B', unit_scale=1) as pbar:
                     future = self.transfer_manager.upload(
                         file_name, self.bucket_name, remote_path, additional_args, [
                             ProgressCallbackInvoker(pbar.update)
