@@ -40,6 +40,7 @@ from samcli.lib.package.utils import (
 )
 from samcli.lib.providers.provider import get_full_path
 from samcli.lib.samlib.resource_metadata_normalizer import ResourceMetadataNormalizer
+from samcli.lib.utils.async_utils import AsyncContext
 from samcli.lib.utils.packagetype import ZIP
 from samcli.lib.utils.resources import (
     AWS_CLOUDFORMATION_STACK,
@@ -275,8 +276,7 @@ class Template:
 
         self._apply_global_values()
         self.template_dict = self._export_global_artifacts(self.template_dict)
-        transfer_futures = []
-        tmp_dirs = []
+        async_context = AsyncContext()
         for resource_logical_id, resource in self.template_dict["Resources"].items():
             resource_type = resource.get("Type", None)
             resource_dict = resource.get("Properties", {})
@@ -290,15 +290,13 @@ class Template:
                     continue
                 # Export code resources
                 exporter = exporter_class(self.uploaders, self.code_signer)
-                ((transfer_future, tmp_dir), tmp_file) = exporter.export(full_path, resource_dict, self.template_dir)
-                transfer_futures.append(transfer_future)
-                tmp_dirs.append(tmp_dir)
-                tmp_dirs.append(tmp_file)
+                async_context.add_async_task(exporter.export, full_path, resource_dict, self.template_dir)
 
-        for transfer_future in transfer_futures:
+        results = async_context.run_async()
+        for ((transfer_future, tmp_dir), tmp_file) in results:
             transfer_future.result()
-
-        for tmp_dir in tmp_dirs:
+            if tmp_file:
+                shutil.rmtree(tmp_file, ignore_errors=True)
             if tmp_dir:
                 shutil.rmtree(tmp_dir, ignore_errors=True)
 
