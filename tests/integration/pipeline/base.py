@@ -1,6 +1,7 @@
 import os
 import shutil
 import logging
+import tempfile
 import uuid
 from pathlib import Path
 from typing import List, Optional, Set, Tuple, Any
@@ -16,7 +17,15 @@ from tests.testing_utils import get_sam_command
 
 
 class PipelineBase(TestCase):
-    pass
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.test_data_path = Path(tempfile.mkdtemp())
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        if cls.test_data_path:
+            shutil.rmtree(cls.test_data_path, ignore_errors=True)
 
 
 class InitIntegBase(PipelineBase):
@@ -24,6 +33,7 @@ class InitIntegBase(PipelineBase):
 
     @classmethod
     def setUpClass(cls) -> None:
+        super().setUpClass()
         # we need to compare the whole generated template, which is
         # larger than normal diff size limit
         cls.maxDiff = None
@@ -55,6 +65,7 @@ class BootstrapIntegBase(PipelineBase):
 
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
         cls.cf_client = boto3.client("cloudformation", region_name=cls.region)
         cls.randomized_stage_suffix = uuid.uuid4().hex[-6:]
 
