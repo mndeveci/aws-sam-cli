@@ -62,9 +62,7 @@ class TestInit(InitIntegBase):
         self.generated_files.append(generated_jenkinsfile_path)
 
         init_command_list = self.get_init_command_list()
-        init_process_execute = run_command_with_inputs(
-            init_command_list, QUICK_START_JENKINS_INPUTS_WITHOUT_AUTO_FILL, cwd=self.test_data_path
-        )
+        init_process_execute = run_command_with_inputs(init_command_list, QUICK_START_JENKINS_INPUTS_WITHOUT_AUTO_FILL)
 
         self.assertEqual(init_process_execute.process.returncode, 0)
         self.assertTrue(Path("Jenkinsfile").exists())
@@ -79,7 +77,7 @@ class TestInit(InitIntegBase):
 
         init_command_list = self.get_init_command_list()
         init_process_execute = run_command_with_inputs(
-            init_command_list, [*QUICK_START_JENKINS_INPUTS_WITHOUT_AUTO_FILL, "y"], cwd=self.test_data_path
+            init_command_list, [*QUICK_START_JENKINS_INPUTS_WITHOUT_AUTO_FILL, "y"]
         )
 
         self.assertEqual(init_process_execute.process.returncode, 0)
@@ -95,7 +93,7 @@ class TestInit(InitIntegBase):
 
         init_command_list = self.get_init_command_list()
         init_process_execute = run_command_with_inputs(
-            init_command_list, [*QUICK_START_JENKINS_INPUTS_WITHOUT_AUTO_FILL, ""], cwd=self.test_data_path
+            init_command_list, [*QUICK_START_JENKINS_INPUTS_WITHOUT_AUTO_FILL, ""]
         )
 
         self.assertEqual(init_process_execute.process.returncode, 0)
@@ -118,7 +116,7 @@ class TestInit(InitIntegBase):
         inputs = ["2", str(custom_template_path), "2", "", "Rainy"]  # custom template
 
         init_command_list = self.get_init_command_list()
-        init_process_execute = run_command_with_inputs(init_command_list, inputs, cwd=self.test_data_path)
+        init_process_execute = run_command_with_inputs(init_command_list, inputs)
 
         self.assertEqual(init_process_execute.process.returncode, 0)
 
@@ -135,7 +133,7 @@ class TestInit(InitIntegBase):
         inputs = ["2", str(custom_template_path), "", "Rainy"]  # custom template
 
         init_command_list = self.get_init_command_list()
-        init_process_execute = run_command_with_inputs(init_command_list, inputs, cwd=self.test_data_path)
+        init_process_execute = run_command_with_inputs(init_command_list, inputs)
 
         self.assertEqual(init_process_execute.process.returncode, 0)
 
@@ -195,7 +193,7 @@ class TestInit(InitIntegBase):
         ]
 
         init_command_list = self.get_init_command_list(with_bootstrap)
-        init_process_execute = run_command_with_inputs(init_command_list, inputs, cwd=self.test_data_path)
+        init_process_execute = run_command_with_inputs(init_command_list, inputs)
 
         self.assertEqual(init_process_execute.process.returncode, 0)
         self.assertTrue(Path("Jenkinsfile").exists())
@@ -262,7 +260,7 @@ class TestInitWithBootstrap(BootstrapIntegBase):
             "2",
             "prod-stack",
         ]
-        init_process_execute = run_command_with_inputs(self.command_list, inputs, cwd=self.test_data_path)
+        init_process_execute = run_command_with_inputs(self.command_list, inputs)
         self.assertEqual(init_process_execute.process.returncode, 0)
         self.assertIn("Here are the stage configuration names detected", init_process_execute.stdout.decode())
         self.assertIn(stage_configuration_names[0], init_process_execute.stdout.decode())
@@ -291,7 +289,7 @@ class TestInitWithBootstrap(BootstrapIntegBase):
             "y",  # Create resources
         ]
 
-        bootstrap_process_execute = run_command_with_inputs(bootstrap_command_list, inputs, cwd=self.test_data_path)
+        bootstrap_process_execute = run_command_with_inputs(bootstrap_command_list, inputs)
 
         self.assertEqual(bootstrap_process_execute.process.returncode, 0)
 
@@ -316,7 +314,7 @@ class TestInitWithBootstrap(BootstrapIntegBase):
             "2",
             "prod-stack",
         ]
-        init_process_execute = run_command_with_inputs(self.command_list, inputs, cwd=self.test_data_path)
+        init_process_execute = run_command_with_inputs(self.command_list, inputs)
         self.assertEqual(init_process_execute.process.returncode, 0)
         self.assertIn("Here are the stage configuration names detected", init_process_execute.stdout.decode())
         self.assertIn(stage_configuration_names[0], init_process_execute.stdout.decode())

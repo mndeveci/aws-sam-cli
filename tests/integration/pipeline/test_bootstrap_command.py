@@ -59,7 +59,7 @@ class TestBootstrap(BootstrapIntegBase):
         inputs.append("")  # Confirm summary
         inputs.append("y")  # Create resources
 
-        bootstrap_process_execute = run_command_with_inputs(bootstrap_command_list, inputs, cwd=self.test_data_path)
+        bootstrap_process_execute = run_command_with_inputs(bootstrap_command_list, inputs)
 
         self.assertEqual(bootstrap_process_execute.process.returncode, 0)
         stdout = bootstrap_process_execute.stdout.decode()
@@ -120,7 +120,7 @@ class TestBootstrap(BootstrapIntegBase):
         inputs.append("")  # Confirm summary
         inputs.append("y")  # Create resources
 
-        bootstrap_process_execute = run_command_with_inputs(bootstrap_command_list, inputs, cwd=self.test_data_path)
+        bootstrap_process_execute = run_command_with_inputs(bootstrap_command_list, inputs)
 
         self.assertEqual(bootstrap_process_execute.process.returncode, 0)
         stdout = bootstrap_process_execute.stdout.decode()
@@ -157,7 +157,7 @@ class TestBootstrap(BootstrapIntegBase):
             region=self.region,
         )
 
-        bootstrap_process_execute = run_command(bootstrap_command_list, cwd=self.test_data_path)
+        bootstrap_process_execute = run_command(bootstrap_command_list)
 
         self.assertEqual(bootstrap_process_execute.process.returncode, 2)
         stderr = bootstrap_process_execute.stderr.decode()
@@ -182,7 +182,7 @@ class TestBootstrap(BootstrapIntegBase):
             "",
         ]
 
-        bootstrap_process_execute = run_command_with_inputs(bootstrap_command_list, inputs, cwd=self.test_data_path)
+        bootstrap_process_execute = run_command_with_inputs(bootstrap_command_list, inputs)
 
         self.assertEqual(bootstrap_process_execute.process.returncode, 0)
         stdout = bootstrap_process_execute.stdout.decode()
@@ -203,7 +203,7 @@ class TestBootstrap(BootstrapIntegBase):
             region=self.region,
         )
 
-        bootstrap_process_execute = run_command(bootstrap_command_list, cwd=self.test_data_path)
+        bootstrap_process_execute = run_command(bootstrap_command_list)
 
         self.assertEqual(bootstrap_process_execute.process.returncode, 0)
         stdout = bootstrap_process_execute.stdout.decode()
@@ -261,10 +261,7 @@ class TestBootstrap(BootstrapIntegBase):
             "y",  # proceed
         ]
 
-        bootstrap_process_execute = run_command_with_inputs(
-            bootstrap_command_list, inputs if confirm_changeset else [],
-            cwd=self.test_data_path
-        )
+        bootstrap_process_execute = run_command_with_inputs(bootstrap_command_list, inputs if confirm_changeset else [])
 
         self.assertEqual(bootstrap_process_execute.process.returncode, 0)
         stdout = bootstrap_process_execute.stdout.decode()
@@ -291,7 +288,7 @@ class TestBootstrap(BootstrapIntegBase):
             "",  # Create resources confirmation
         ]
 
-        bootstrap_process_execute = run_command_with_inputs(bootstrap_command_list, inputs, cwd=self.test_data_path)
+        bootstrap_process_execute = run_command_with_inputs(bootstrap_command_list, inputs)
 
         self.assertEqual(bootstrap_process_execute.process.returncode, 0)
         stdout = bootstrap_process_execute.stdout.decode()
@@ -318,7 +315,7 @@ class TestBootstrap(BootstrapIntegBase):
             "y",  # Create resources confirmation
         ]
 
-        bootstrap_process_execute = run_command_with_inputs(bootstrap_command_list, inputs, cwd=self.test_data_path)
+        bootstrap_process_execute = run_command_with_inputs(bootstrap_command_list, inputs)
 
         self.assertEqual(bootstrap_process_execute.process.returncode, 0)
         stdout = bootstrap_process_execute.stdout.decode()
@@ -360,7 +357,7 @@ class TestBootstrap(BootstrapIntegBase):
             ]
 
             bootstrap_process_execute = run_command_with_input(
-                bootstrap_command_list, ("\n".join(inputs) + "\n").encode(), cwd=self.test_data_path
+                bootstrap_command_list, ("\n".join(inputs) + "\n").encode()
             )
 
             self.assertEqual(bootstrap_process_execute.process.returncode, 0)
@@ -389,7 +386,7 @@ class TestBootstrap(BootstrapIntegBase):
             region=self.region,
         )
 
-        bootstrap_process_execute = run_command(bootstrap_command_list, cwd=self.test_data_path)
+        bootstrap_process_execute = run_command(bootstrap_command_list)
 
         self.assertEqual(bootstrap_process_execute.process.returncode, 0)
 
@@ -430,7 +427,7 @@ class TestBootstrap(BootstrapIntegBase):
             region=self.region,
         )
 
-        bootstrap_process_execute = run_command(bootstrap_command_list, cwd=self.test_data_path)
+        bootstrap_process_execute = run_command(bootstrap_command_list)
 
         self.assertEqual(bootstrap_process_execute.process.returncode, 0)
 
