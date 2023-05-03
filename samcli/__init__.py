@@ -2,4 +2,4 @@
 SAM CLI version
 """
 
-__version__ = "1.82.5"
+__version__ = "1.82.6"
