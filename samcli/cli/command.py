@@ -173,6 +173,11 @@ class BaseCommand(click.MultiCommand):
                             text=SAM_CLI_COMMANDS.get("sync", ""),
                             extra_row_modifiers=[HighlightNewRowNameModifier()],
                         ),
+                        RowDefinition(
+                            name="remote",
+                            text=SAM_CLI_COMMANDS.get("remote", ""),
+                            extra_row_modifiers=[HighlightNewRowNameModifier()],
+                        ),
                     ],
                 )
 

@@ -28,7 +28,7 @@ SHORT_HELP = "Invoke a deployed resource in the cloud"
 @click.command("invoke", help=HELP_TEXT, short_help=SHORT_HELP)
 @configuration_option(provider=TomlProvider(section="parameters"))
 @click.option("--stack-name", required=False, help="Name of the stack to get the resource information from")
-@click.option("--resource-id", required=False, help="Name of the resource that will be invoked")
+@click.argument("resource_id", required=False)
 @click.option(
     "--event",
     "-e",
