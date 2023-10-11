@@ -10,7 +10,7 @@ jobs:
       - python/install-packages:
           pkg-manager: pip
           pip-dependency-file: ''
-          args: '-e [.dev]'
+          args: "-e '[.dev]'"
       - run:
           name: Run tests
           command: python -m pytest tests/unit
