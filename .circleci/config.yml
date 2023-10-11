@@ -4,6 +4,9 @@ orbs:
 
 jobs:
   build_and_test: # this can be any name you choose
+    parameters:
+      python-version:
+        type: string
     executor: 
       name: python/default
       tag: << parameters.python-version >>
