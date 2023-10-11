@@ -1,17 +1,19 @@
-# CircleCI configuration file
-
 version: 2.1
-
 orbs:
   python: circleci/python@2.0.3
 
 jobs:
   build_and_test: # this can be any name you choose
-    executor: python/default # use the default executor defined within the orb
+    executor: python/default
     steps:
-      - checkout # checkout source code
+      - checkout
       - python/install-packages:
           pkg-manager: pip
       - run:
           name: Run tests
           command: python -m pytest tests/unit
+
+workflows:
+  test_my_app:
+    jobs:
+      - build_and_test
