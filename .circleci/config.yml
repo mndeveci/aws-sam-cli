@@ -9,7 +9,7 @@ jobs:
       - checkout
       - python/install-packages:
           pkg-manager: pip
-          pip-dependency-file: requirements
+          pip-dependency-file: ''
           args: '-e [.dev]'
       - run:
           name: Run tests
