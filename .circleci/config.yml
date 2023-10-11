@@ -8,9 +8,8 @@ jobs:
     steps:
       - checkout
       - python/install-packages:
-          pkg-manager: pip
-          pip-dependency-file: ''
-          args: "-e '[.dev]'"
+          pkg-manager: pip-dist
+          path-args: '[.dev]'
       - run:
           name: Run tests
           command: python -m pytest tests/unit
