@@ -4,7 +4,9 @@ orbs:
 
 jobs:
   build_and_test: # this can be any name you choose
-    executor: python/default
+    executor: 
+      name: python/default
+      tag: << parameters.python-version >>
     steps:
       - checkout
       - python/install-packages:
@@ -17,4 +19,7 @@ jobs:
 workflows:
   test_my_app:
     jobs:
-      - build_and_test
+      - build_and_test:
+          matrix:
+            parameters:
+              python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
