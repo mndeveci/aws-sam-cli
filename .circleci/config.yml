@@ -9,7 +9,8 @@ jobs:
       - checkout
       - python/install-packages:
           pkg-manager: pip
-          pip-dependency-file: requirements/base.txt
+          pip-dependency-file: requirements
+          args: '-e [.dev]'
       - run:
           name: Run tests
           command: python -m pytest tests/unit
