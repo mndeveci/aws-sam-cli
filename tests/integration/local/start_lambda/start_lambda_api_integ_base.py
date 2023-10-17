@@ -100,8 +100,6 @@ class StartLambdaIntegBaseClass(TestCase):
         if retry_count == retries:
             raise ValueError("Ran out of retries attempting to start lambda")
 
-        time.sleep(20)
-
     @classmethod
     def get_start_lambda_command(
         cls,
