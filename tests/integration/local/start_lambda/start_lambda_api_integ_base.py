@@ -63,11 +63,11 @@ class StartLambdaIntegBaseClass(TestCase):
 
         # remove all containers if there
         cls.docker_client = docker.from_env()
-        for container in cls.docker_client.api.containers():
-            try:
-                cls.docker_client.api.remove_container(container, force=True)
-            except APIError as ex:
-                LOG.error("Failed to remove container %s", container)
+        # for container in cls.docker_client.api.containers():
+        #     try:
+        #         cls.docker_client.api.remove_container(container, force=True)
+        #     except APIError as ex:
+        #         LOG.error("Failed to remove container %s", container)
 
         cls.start_lambda_with_retry()
 
