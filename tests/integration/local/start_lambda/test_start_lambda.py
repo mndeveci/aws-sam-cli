@@ -452,7 +452,7 @@ class TestLazyContainersMultipleInvoke(TestWarmContainersBaseClass):
     def test_only_one_new_created_containers_after_lambda_function_invoke(self):
         initiated_containers_before_any_invoke = self.count_running_containers()
         lambda_result = self.lambda_client.invoke(FunctionName="HelloWorldFunction")
-        LOG.info(f"Lambda invoke result: {lambda_result}")
+        LOG.info(f"Lambda invoke result: {lambda_result} fpr {self.mode_env_variable} and {self.port}")
         initiated_containers = self.count_running_containers()
 
         # only one container is initialized
