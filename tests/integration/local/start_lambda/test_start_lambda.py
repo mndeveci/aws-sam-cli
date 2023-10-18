@@ -451,7 +451,8 @@ class TestLazyContainersMultipleInvoke(TestWarmContainersBaseClass):
     @pytest.mark.timeout(timeout=600, method="thread")
     def test_only_one_new_created_containers_after_lambda_function_invoke(self):
         initiated_containers_before_any_invoke = self.count_running_containers()
-        self.lambda_client.invoke(FunctionName="HelloWorldFunction")
+        lambda_result = self.lambda_client.invoke(FunctionName="HelloWorldFunction")
+        LOG.info(f"Lambda invoke result: {lambda_result}")
         initiated_containers = self.count_running_containers()
 
         # only one container is initialized
