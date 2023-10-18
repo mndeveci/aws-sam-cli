@@ -1,22 +1,22 @@
+import json
 import logging
+import random
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from time import time, sleep
-import json
-
-import docker
-from parameterized import parameterized, parameterized_class
-
-import pytest
-import random
 
 import boto3
+import pytest
 from botocore import UNSIGNED
 from botocore.config import Config
 from botocore.exceptions import ClientError
+from parameterized import parameterized, parameterized_class
 
 from samcli.commands.local.cli_common.invoke_context import ContainersInitializationMode
-from .start_lambda_api_integ_base import StartLambdaIntegBaseClass, WatchWarmContainersIntegBaseClass
+from tests.integration.local.start_lambda.start_lambda_api_integ_base import (
+    StartLambdaIntegBaseClass,
+    WatchWarmContainersIntegBaseClass,
+)
 
 LOG = logging.getLogger(__name__)
 
