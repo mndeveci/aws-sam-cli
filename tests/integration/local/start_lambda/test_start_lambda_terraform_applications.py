@@ -175,6 +175,7 @@ class TestLocalStartLambdaTerraformApplicationWithLayersWithoutBuild(StartLambda
 
     @classmethod
     def setUpClass(cls):
+        cls.move_test_files_into_scratch_dir()
         cls.region_name = os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
 
         # create some Lambda Layers to be used in the Terraform project
