@@ -1,14 +1,13 @@
+import logging
+import os
 import shutil
-import time
+import threading
 import uuid
+from pathlib import Path
 from shutil import rmtree
+from subprocess import Popen, PIPE
 from typing import Optional, Dict, List
 from unittest import TestCase, skipIf
-import threading
-from subprocess import Popen, PIPE
-import os
-import logging
-from pathlib import Path
 
 import boto3
 import docker
@@ -25,9 +24,10 @@ from tests.testing_utils import (
     kill_process,
     get_sam_command,
 )
+from filelock import FileLock
 
 LOG = logging.getLogger(__name__)
-DOCKER_CONTAINER_REMOVAL_LOCK = threading.Lock()
+DOCKER_CONTAINER_REMOVAL_LOCK = FileLock(str(uuid.uuid4().hex))
 
 
 @skipIf(SKIP_DOCKER_TESTS, SKIP_DOCKER_MESSAGE)
@@ -96,7 +96,7 @@ class StartLambdaIntegBaseClass(TestCase):
         if cls.moved_to_scratch:
             return
         cls.moved_to_scratch = True
-        scratch_dir = Path(__file__).resolve().parent.joinpath(".tmp", str(uuid.uuid4()).replace("-", "")[:10], "testdata")
+        scratch_dir = Path(__file__).resolve().parent.joinpath(".tmp", str(uuid.uuid4().hex), "testdata")
         shutil.rmtree(scratch_dir, ignore_errors=True)
         os.makedirs(scratch_dir)
         copytree(str(Path(cls.integration_dir).joinpath("testdata")), str(scratch_dir))
