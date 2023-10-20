@@ -27,7 +27,6 @@ from tests.testing_utils import (
 )
 
 LOG = logging.getLogger(__name__)
-DOCKER_CONTAINER_REMOVAL_LOCK = threading.Lock()
 
 
 @skipIf(SKIP_DOCKER_TESTS, SKIP_DOCKER_MESSAGE)
@@ -69,15 +68,13 @@ class StartLambdaIntegBaseClass(TestCase):
 
     @classmethod
     def remove_existing_containers(cls):
-        with DOCKER_CONTAINER_REMOVAL_LOCK:
-            for container in cls.docker_client.api.containers():
-                try:
-                    cls.docker_client.api.remove_container(container, force=True)
-                except APIError as ex:
-                    LOG.error("Failed to remove container %s", container)
+        # for container in cls.docker_client.api.containers():
+        #     try:
+        #         cls.docker_client.api.remove_container(container, force=True)
+        #     except APIError as ex:
+        #         LOG.error("Failed to remove container %s", container)
 
     def setUp(self) -> None:
-        DOCKER_CONTAINER_REMOVAL_LOCK.acquire()
         self.url = "http://127.0.0.1:{}".format(self.port)
         self.lambda_client = boto3.client(
             "lambda",
@@ -87,9 +84,6 @@ class StartLambdaIntegBaseClass(TestCase):
             verify=False,
             config=Config(signature_version=UNSIGNED, read_timeout=120, retries={"max_attempts": 0}),
         )
-
-    def tearDown(self) -> None:
-        DOCKER_CONTAINER_REMOVAL_LOCK.release()
 
     @classmethod
     def move_test_files_into_scratch_dir(cls):
