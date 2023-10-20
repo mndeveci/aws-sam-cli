@@ -277,7 +277,7 @@ class TestLocalStartLambdaTerraformApplicationWithLayersWithoutBuild(StartLambda
         time.sleep(S3_SLEEP)
         cls.s3_bucket.delete()
 
-        super(TestLocalStartLambdaTerraformApplicationWithLayersWithoutBuild, cls).tearDownClass()
+        super().tearDownClass()
 
     def setUp(self):
         self.url = "http://127.0.0.1:{}".format(self.port)
@@ -472,6 +472,7 @@ class TestLocalStartLambdaTerraformApplicationWithLocalImageUri(StartLambdaTerra
             cls.docker_client.api.remove_image(cls.docker_tag)
         except APIError:
             pass
+    super().tearDownClass()
 
     @parameterized.expand(functions)
     @pytest.mark.flaky(reruns=3)
