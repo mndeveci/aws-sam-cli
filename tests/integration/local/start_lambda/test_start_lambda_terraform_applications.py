@@ -340,11 +340,11 @@ class TestInvalidTerraformApplicationThatReferToS3BucketNotCreatedYet(StartLambd
 
         # remove all containers if there
         self.docker_client = docker.from_env()
-        for container in self.docker_client.api.containers():
-            try:
-                self.docker_client.api.remove_container(container, force=True)
-            except APIError as ex:
-                LOG.error("Failed to remove container %s", container, exc_info=ex)
+        # for container in self.docker_client.api.containers():
+        #     try:
+        #         self.docker_client.api.remove_container(container, force=True)
+        #     except APIError as ex:
+        #         LOG.error("Failed to remove container %s", container, exc_info=ex)
 
     def tearDown(self):
         # delete the override file
