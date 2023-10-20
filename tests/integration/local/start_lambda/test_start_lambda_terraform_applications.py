@@ -75,6 +75,7 @@ class TestLocalStartLambdaTerraformApplicationWithoutBuild(StartLambdaTerraformA
     hook_name = "terraform"
 
     def setUp(self):
+        super().setUp()
         self.url = "http://127.0.0.1:{}".format(self.port)
         self.lambda_client = boto3.client(
             "lambda",
@@ -119,6 +120,7 @@ class TestLocalStartLambdaTerraformApplicationWithoutBuildCustomPlanFile(StartLa
     terraform_plan_file = "custom-plan.json"
 
     def setUp(self):
+        super().setUp()
         self.url = "http://127.0.0.1:{}".format(self.port)
         self.lambda_client = boto3.client(
             "lambda",
@@ -280,6 +282,7 @@ class TestLocalStartLambdaTerraformApplicationWithLayersWithoutBuild(StartLambda
         super().tearDownClass()
 
     def setUp(self):
+        super().setUp()
         self.url = "http://127.0.0.1:{}".format(self.port)
         self.lambda_client = boto3.client(
             "lambda",
@@ -335,18 +338,13 @@ class TestInvalidTerraformApplicationThatReferToS3BucketNotCreatedYet(StartLambd
         pass
 
     def setUp(self):
+        super().setUp()
         self.working_dir = self.integration_dir + self.terraform_application
         self.port = str(random_port())
-
-        # remove all containers if there
         self.docker_client = docker.from_env()
-        # for container in self.docker_client.api.containers():
-        #     try:
-        #         self.docker_client.api.remove_container(container, force=True)
-        #     except APIError as ex:
-        #         LOG.error("Failed to remove container %s", container, exc_info=ex)
 
     def tearDown(self):
+        super().tearDown()
         # delete the override file
         try:
             shutil.rmtree(str(Path(self.working_dir).joinpath(".aws-sam-iacs")))
@@ -386,6 +384,7 @@ class TestLocalStartLambdaInvalidUsecasesTerraform(StartLambdaTerraformApplicati
         pass
 
     def setUp(self):
+        super().setUp()
         self.integration_dir = str(Path(__file__).resolve().parents[2])
         terraform_application = "/testdata/invoke/terraform/simple_application_no_building_logic"
         self.working_dir = self.integration_dir + terraform_application
@@ -430,6 +429,7 @@ class TestLocalStartLambdaTerraformApplicationWithLocalImageUri(StartLambdaTerra
     ]
 
     def setUp(self):
+        super().setUp()
         self.url = "http://127.0.0.1:{}".format(self.port)
         self.lambda_client = boto3.client(
             "lambda",

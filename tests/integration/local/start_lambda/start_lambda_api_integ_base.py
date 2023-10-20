@@ -10,7 +10,10 @@ import os
 import logging
 from pathlib import Path
 
+import boto3
 import docker
+from botocore import UNSIGNED
+from botocore.config import Config
 from docker.errors import APIError
 
 from samcli.lib.utils.osutils import copytree
@@ -24,6 +27,7 @@ from tests.testing_utils import (
 )
 
 LOG = logging.getLogger(__name__)
+DOCKER_CONTAINER_REMOVAL_LOCK = threading.Lock()
 
 
 @skipIf(SKIP_DOCKER_TESTS, SKIP_DOCKER_MESSAGE)
@@ -60,13 +64,32 @@ class StartLambdaIntegBaseClass(TestCase):
 
         # remove all containers if there
         cls.docker_client = docker.from_env()
-        # for container in cls.docker_client.api.containers():
-        #     try:
-        #         cls.docker_client.api.remove_container(container, force=True)
-        #     except APIError as ex:
-        #         LOG.error("Failed to remove container %s", container)
-
+        cls.remove_existing_containers()
         cls.start_lambda_with_retry()
+
+    @classmethod
+    def remove_existing_containers(cls):
+        with DOCKER_CONTAINER_REMOVAL_LOCK:
+            for container in cls.docker_client.api.containers():
+                try:
+                    cls.docker_client.api.remove_container(container, force=True)
+                except APIError as ex:
+                    LOG.error("Failed to remove container %s", container)
+
+    def setUp(self) -> None:
+        DOCKER_CONTAINER_REMOVAL_LOCK.acquire()
+        self.url = "http://127.0.0.1:{}".format(self.port)
+        self.lambda_client = boto3.client(
+            "lambda",
+            endpoint_url=self.url,
+            region_name="us-east-1",
+            use_ssl=False,
+            verify=False,
+            config=Config(signature_version=UNSIGNED, read_timeout=120, retries={"max_attempts": 0}),
+        )
+
+    def tearDown(self) -> None:
+        DOCKER_CONTAINER_REMOVAL_LOCK.release()
 
     @classmethod
     def move_test_files_into_scratch_dir(cls):
