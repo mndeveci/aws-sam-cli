@@ -4,6 +4,7 @@ import platform
 import subprocess
 import tempfile
 from pathlib import Path
+from signal import SIGINT
 
 from threading import Thread
 from typing import Callable, List, Optional
@@ -120,6 +121,11 @@ def kill_process(process: Popen) -> None:
     Raises ValueError if some processes are alive"""
     root_process = psutil.Process(process.pid)
     all_processes = root_process.children(recursive=True)
+
+    # first send ctrl + c and wait for process to exit, then kill if it is not stopped yet
+    root_process.send_signal(SIGINT)
+    root_process.wait(10)
+
     all_processes.append(root_process)
     for process_to_kill in all_processes:
         try:
