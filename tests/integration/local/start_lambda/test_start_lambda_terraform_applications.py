@@ -6,7 +6,7 @@ import uuid
 from pathlib import Path
 from subprocess import Popen, PIPE, TimeoutExpired
 from typing import Optional, Dict
-from unittest import skipIf, skip
+from unittest import skipIf
 
 import logging
 
@@ -47,15 +47,6 @@ class StartLambdaTerraformApplicationIntegBase(StartLambdaIntegBaseClass):
 
         if cls.build_before_invoke:
             cls.build()
-
-        # remove all containers if there
-        cls.docker_client = docker.from_env()
-        # for container in cls.docker_client.api.containers():
-        #     try:
-        #         cls.docker_client.api.remove_container(container, force=True)
-        #     except APIError as ex:
-        #         LOG.error("Failed to remove container %s", container, exc_info=ex)
-
         cls.start_lambda_with_retry(input=cls.input, env=cls.env)
 
     @classmethod
@@ -341,7 +332,6 @@ class TestInvalidTerraformApplicationThatReferToS3BucketNotCreatedYet(StartLambd
         super().setUp()
         self.working_dir = self.integration_dir + self.terraform_application
         self.port = str(random_port())
-        self.docker_client = docker.from_env()
 
     def tearDown(self):
         super().tearDown()
