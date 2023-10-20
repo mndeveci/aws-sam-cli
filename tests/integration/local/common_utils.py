@@ -26,7 +26,7 @@ def wait_for_local_process(process, port, collect_output=False) -> str:
         line = process.stderr.readline()
         line_as_str = str(line.decode("utf-8")).strip()
         if line_as_str:
-            LOG.info(line_as_str)
+            LOG.info(f"{line_as_str}")
             if collect_output:
                 output += f"{line_as_str}\n"
         if "Address already in use" in line_as_str:
@@ -34,12 +34,6 @@ def wait_for_local_process(process, port, collect_output=False) -> str:
             raise InvalidAddressException()
         if "Press CTRL+C to quit" in line_as_str or "Error: " in line_as_str:
             break
-
-        line_stdout = process.stdout.readline()
-        line_stdout_as_str = str(line.decode("utf-8")).strip()
-        if line_stdout_as_str:
-            LOG.info(line_stdout_as_str)
-
         time.sleep(1)
 
     return output
