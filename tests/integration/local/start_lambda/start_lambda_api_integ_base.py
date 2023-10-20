@@ -73,6 +73,7 @@ class StartLambdaIntegBaseClass(TestCase):
         #         cls.docker_client.api.remove_container(container, force=True)
         #     except APIError as ex:
         #         LOG.error("Failed to remove container %s", container)
+        pass
 
     def setUp(self) -> None:
         self.url = "http://127.0.0.1:{}".format(self.port)
