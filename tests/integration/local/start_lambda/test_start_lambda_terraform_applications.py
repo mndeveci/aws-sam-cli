@@ -36,6 +36,7 @@ class StartLambdaTerraformApplicationIntegBase(StartLambdaIntegBaseClass):
     def setUpClass(cls):
         # This is the directory for tests/integration which will be used to file the testdata
         # files for integ tests
+        cls.move_test_files_into_scratch_dir()
         if cls.template_path:
             cls.template = cls.integration_dir + cls.template_path
 
