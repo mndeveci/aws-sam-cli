@@ -456,7 +456,7 @@ class TestLocalStartLambdaTerraformApplicationWithLocalImageUri(StartLambdaTerra
             cls.build()
 
         cls.docker_client = docker.from_env()
-        cls.image_name = f"sam-test-lambdaimage{str(uuid.uuid4().hex)}"
+        cls.image_name = "sam-test-lambdaimage"
         cls.docker_tag = f"{cls.image_name}:v1"
         cls.test_data_invoke_path = str(Path(cls.integration_dir).joinpath("testdata", "invoke"))
         # Directly build an image that will be used across all local invokes in this class.
