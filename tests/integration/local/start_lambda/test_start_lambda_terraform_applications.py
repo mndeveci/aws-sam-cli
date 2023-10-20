@@ -65,18 +65,6 @@ class TestLocalStartLambdaTerraformApplicationWithoutBuild(StartLambdaTerraformA
     template_path = None
     hook_name = "terraform"
 
-    def setUp(self):
-        super().setUp()
-        self.url = "http://127.0.0.1:{}".format(self.port)
-        self.lambda_client = boto3.client(
-            "lambda",
-            endpoint_url=self.url,
-            region_name="us-east-1",
-            use_ssl=False,
-            verify=False,
-            config=Config(signature_version=UNSIGNED, read_timeout=120, retries={"max_attempts": 0}),
-        )
-
     functions = [
         "s3_lambda_function",
         "aws_lambda_function.s3_lambda",
@@ -109,18 +97,6 @@ class TestLocalStartLambdaTerraformApplicationWithoutBuildCustomPlanFile(StartLa
     template_path = None
     hook_name = "terraform"
     terraform_plan_file = "custom-plan.json"
-
-    def setUp(self):
-        super().setUp()
-        self.url = "http://127.0.0.1:{}".format(self.port)
-        self.lambda_client = boto3.client(
-            "lambda",
-            endpoint_url=self.url,
-            region_name="us-east-1",
-            use_ssl=False,
-            verify=False,
-            config=Config(signature_version=UNSIGNED, read_timeout=120, retries={"max_attempts": 0}),
-        )
 
     functions = [
         "s3_lambda_function",
@@ -272,18 +248,6 @@ class TestLocalStartLambdaTerraformApplicationWithLayersWithoutBuild(StartLambda
 
         super().tearDownClass()
 
-    def setUp(self):
-        super().setUp()
-        self.url = "http://127.0.0.1:{}".format(self.port)
-        self.lambda_client = boto3.client(
-            "lambda",
-            endpoint_url=self.url,
-            region_name="us-east-1",
-            use_ssl=False,
-            verify=False,
-            config=Config(signature_version=UNSIGNED, read_timeout=120, retries={"max_attempts": 0}),
-        )
-
     functions = [
         ("module.function44.aws_lambda_function.this", "hello world 44"),
         ("module.function33.aws_lambda_function.this", "hello world 33"),
@@ -417,18 +381,6 @@ class TestLocalStartLambdaTerraformApplicationWithLocalImageUri(StartLambdaTerra
         "image_lambda_function",
         "aws_lambda_function.image_lambda",
     ]
-
-    def setUp(self):
-        super().setUp()
-        self.url = "http://127.0.0.1:{}".format(self.port)
-        self.lambda_client = boto3.client(
-            "lambda",
-            endpoint_url=self.url,
-            region_name="us-east-1",
-            use_ssl=False,
-            verify=False,
-            config=Config(signature_version=UNSIGNED, read_timeout=120, retries={"max_attempts": 0}),
-        )
 
     @classmethod
     def setUpClass(cls):

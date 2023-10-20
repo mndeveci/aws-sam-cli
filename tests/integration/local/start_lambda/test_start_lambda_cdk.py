@@ -10,17 +10,6 @@ from tests.integration.local.start_lambda.start_lambda_api_integ_base import Sta
 class TestCDKLambdaService(StartLambdaIntegBaseClass):
     template_path = "/testdata/invoke/cdk/cdk_template.yaml"
 
-    def setUp(self):
-        self.url = "http://127.0.0.1:{}".format(self.port)
-        self.lambda_client = boto3.client(
-            "lambda",
-            endpoint_url=self.url,
-            region_name="us-east-1",
-            use_ssl=False,
-            verify=False,
-            config=Config(signature_version=UNSIGNED, read_timeout=120, retries={"max_attempts": 0}),
-        )
-
     @pytest.mark.flaky(reruns=3)
     @pytest.mark.timeout(timeout=300, method="thread")
     def test_invoke_with_no_data(self):
@@ -69,17 +58,6 @@ class TestCDKLambdaService(StartLambdaIntegBaseClass):
 
 class TestLambdaServiceErrorCases(StartLambdaIntegBaseClass):
     template_path = "/testdata/invoke/cdk/cdk_template.yaml"
-
-    def setUp(self):
-        self.url = "http://127.0.0.1:{}".format(self.port)
-        self.lambda_client = boto3.client(
-            "lambda",
-            endpoint_url=self.url,
-            region_name="us-east-1",
-            use_ssl=False,
-            verify=False,
-            config=Config(signature_version=UNSIGNED, read_timeout=120, retries={"max_attempts": 0}),
-        )
 
     @pytest.mark.flaky(reruns=3)
     @pytest.mark.timeout(timeout=300, method="thread")
