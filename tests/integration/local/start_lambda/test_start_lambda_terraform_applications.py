@@ -293,7 +293,6 @@ class TestInvalidTerraformApplicationThatReferToS3BucketNotCreatedYet(StartLambd
         pass
 
     def setUp(self):
-        super().setUp()
         self.working_dir = self.integration_dir + self.terraform_application
         self.port = str(random_port())
 
@@ -338,7 +337,6 @@ class TestLocalStartLambdaInvalidUsecasesTerraform(StartLambdaTerraformApplicati
         pass
 
     def setUp(self):
-        super().setUp()
         self.integration_dir = str(Path(__file__).resolve().parents[2])
         terraform_application = "/testdata/invoke/terraform/simple_application_no_building_logic"
         self.working_dir = self.integration_dir + terraform_application
