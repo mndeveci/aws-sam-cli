@@ -443,6 +443,7 @@ class TestLocalStartLambdaTerraformApplicationWithLocalImageUri(StartLambdaTerra
 
     @classmethod
     def setUpClass(cls):
+        cls.move_test_files_into_scratch_dir()
         if cls.template_path:
             cls.template = cls.integration_dir + cls.template_path
 
