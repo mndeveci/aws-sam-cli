@@ -36,7 +36,7 @@ def wait_for_local_process(process, port, collect_output=False) -> str:
             break
 
         line_stdout = process.stdout.readline()
-        line_stdout_as_str = str(line_stdout.decode("utf-8")).strip()
+        line_stdout_as_str = str(line.decode("utf-8")).strip()
         if line_stdout_as_str:
             LOG.info(line_stdout_as_str)
 
