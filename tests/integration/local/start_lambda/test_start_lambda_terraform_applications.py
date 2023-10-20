@@ -156,11 +156,10 @@ class TestLocalStartLambdaTerraformApplicationWithoutBuildCustomPlanFile(StartLa
         self.assertEqual(response.get("StatusCode"), 200)
 
 
-# @skipIf(
-#     (not RUN_BY_CANARY and not CI_OVERRIDE),
-#     "Skip Terraform test cases unless running in CI",
-# )
-@skip("Test terraform layer tests for now")
+@skipIf(
+    (not RUN_BY_CANARY and not CI_OVERRIDE),
+    "Skip Terraform test cases unless running in CI",
+)
 @parameterized_class(
     ("should_apply_first",),
     [
