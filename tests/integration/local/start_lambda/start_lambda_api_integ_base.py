@@ -43,6 +43,7 @@ class StartLambdaIntegBaseClass(TestCase):
     build_overrides: Optional[Dict[str, str]] = None
 
     working_dir: Optional[str] = None
+    moved_to_scratch = False
 
     @classmethod
     def setUpClass(cls):
@@ -69,6 +70,9 @@ class StartLambdaIntegBaseClass(TestCase):
 
     @classmethod
     def move_test_files_into_scratch_dir(cls):
+        if cls.moved_to_scratch:
+            return
+        cls.moved_to_scratch = True
         scratch_dir = Path(__file__).resolve().parent.joinpath(".tmp", str(uuid.uuid4()).replace("-", "")[:10], "testdata")
         shutil.rmtree(scratch_dir, ignore_errors=True)
         os.makedirs(scratch_dir)
