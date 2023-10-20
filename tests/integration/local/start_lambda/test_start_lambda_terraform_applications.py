@@ -472,7 +472,7 @@ class TestLocalStartLambdaTerraformApplicationWithLocalImageUri(StartLambdaTerra
             cls.docker_client.api.remove_image(cls.docker_tag)
         except APIError:
             pass
-    super().tearDownClass()
+        super().tearDownClass()
 
     @parameterized.expand(functions)
     @pytest.mark.flaky(reruns=3)
