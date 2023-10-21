@@ -5,7 +5,7 @@ from unittest import TestCase, skipIf
 from pathlib import Path
 from subprocess import Popen, PIPE, TimeoutExpired
 
-from lib.utils.osutils import copytree
+from samcli.lib.utils.osutils import copytree
 from tests.testing_utils import SKIP_DOCKER_MESSAGE, SKIP_DOCKER_TESTS, get_sam_command
 
 TIMEOUT = 300
