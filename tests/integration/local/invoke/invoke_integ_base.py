@@ -1,9 +1,11 @@
 import os
+import shutil
 from typing import Optional
 from unittest import TestCase, skipIf
 from pathlib import Path
 from subprocess import Popen, PIPE, TimeoutExpired
 
+from lib.utils.osutils import copytree
 from tests.testing_utils import SKIP_DOCKER_MESSAGE, SKIP_DOCKER_TESTS, get_sam_command
 
 TIMEOUT = 300
@@ -16,12 +18,26 @@ class InvokeIntegBase(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.cmd = get_sam_command()
-        cls.test_data_path = cls.get_integ_dir().joinpath("testdata")
+        cls.integration_dir = cls.get_integ_dir()
+        cls.move_test_files_into_scratch_dir()
+        cls.test_data_path = cls.integration_dir.joinpath("testdata")
         if cls.template:
             cls.template_path = str(cls.test_data_path.joinpath("invoke", cls.template))
         cls.event_path = str(cls.test_data_path.joinpath("invoke", "event.json"))
         cls.event_utf8_path = str(cls.test_data_path.joinpath("invoke", "event_utf8.json"))
         cls.env_var_path = str(cls.test_data_path.joinpath("invoke", "vars.json"))
+
+    @classmethod
+    def move_test_files_into_scratch_dir(cls):
+        if cls.moved_to_scratch:
+            return
+        cls.moved_to_scratch = True
+        scratch_dir = Path(__file__).resolve().parent.joinpath(".tmp", str(uuid.uuid4()).replace("-", "")[:10],
+                                                               "testdata")
+        shutil.rmtree(scratch_dir, ignore_errors=True)
+        os.makedirs(scratch_dir)
+        copytree(str(Path(cls.integration_dir).joinpath("testdata")), str(scratch_dir))
+        cls.integration_dir = str(scratch_dir.parent)
 
     @staticmethod
     def get_integ_dir():

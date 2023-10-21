@@ -350,7 +350,7 @@ class TestInvokeTerraformApplicationWithLocalImageUri(InvokeTerraformApplication
         cls.client = docker.from_env()
         cls.image_name = "sam-test-lambdaimage"
         cls.docker_tag = f"{cls.image_name}:v1"
-        cls.test_data_invoke_path = str(Path(__file__).resolve().parents[2].joinpath("testdata", "invoke"))
+        cls.test_data_invoke_path = str(Path(cls.integration_dir).joinpath("testdata", "invoke"))
         # Directly build an image that will be used across all local invokes in this class.
         for log in cls.client.api.build(
             path=cls.test_data_invoke_path, dockerfile="Dockerfile", tag=cls.docker_tag, decode=True
