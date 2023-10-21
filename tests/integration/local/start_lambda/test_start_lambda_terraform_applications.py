@@ -11,8 +11,6 @@ from unittest import skipIf
 import logging
 
 import boto3
-from botocore import UNSIGNED
-from botocore.config import Config
 import docker
 import pytest
 from docker.errors import APIError
@@ -21,7 +19,7 @@ from parameterized import parameterized, parameterized_class
 from tests.integration.local.common_utils import random_port
 from tests.integration.local.invoke.layer_utils import LayerUtils
 from tests.integration.local.start_lambda.start_lambda_api_integ_base import StartLambdaIntegBaseClass
-from tests.testing_utils import CI_OVERRIDE, IS_WINDOWS, RUNNING_ON_CI, RUN_BY_CANARY
+from tests.testing_utils import CI_OVERRIDE, IS_WINDOWS, RUNNING_ON_CI, RUN_BY_CANARY, kill_process
 
 LOG = logging.getLogger(__name__)
 S3_SLEEP = 3
@@ -56,7 +54,7 @@ class StartLambdaTerraformApplicationIntegBase(StartLambdaIntegBaseClass):
             (stdout, stderr) = process.communicate(timeout=300)
             return stdout, stderr, process.returncode
         except TimeoutExpired:
-            process.kill()
+            kill_process(process)
             raise
 
 
