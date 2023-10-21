@@ -14,6 +14,7 @@ TIMEOUT = 300
 @skipIf(SKIP_DOCKER_TESTS, SKIP_DOCKER_MESSAGE)
 class InvokeIntegBase(TestCase):
     template: Optional[Path] = None
+    moved_to_scratch = False
 
     @classmethod
     def setUpClass(cls):
