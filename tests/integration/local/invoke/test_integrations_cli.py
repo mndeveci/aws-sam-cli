@@ -3,6 +3,7 @@ import shutil
 import os
 import copy
 import tempfile
+import uuid
 from unittest import skipIf
 
 from parameterized import parameterized, parameterized_class
@@ -748,7 +749,7 @@ class TestLayerVersionBase(InvokeIntegBase):
     layer_utils = LayerUtils(region=region)
 
     def setUp(self):
-        self.layer_cache = Path().home().joinpath("integ_layer_cache")
+        self.layer_cache = Path().home().joinpath("integ_layer_cache", str(uuid.uuid4().hex))
 
     def tearDown(self):
         docker_client = docker.from_env()
