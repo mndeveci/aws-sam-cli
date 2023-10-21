@@ -22,7 +22,7 @@ class InvokeIntegBase(TestCase):
         cls.cmd = get_sam_command()
         cls.integration_dir = cls.get_integ_dir()
         cls.move_test_files_into_scratch_dir()
-        cls.test_data_path = cls.integration_dir.joinpath("testdata")
+        cls.test_data_path = Path(cls.integration_dir).joinpath("testdata")
         if cls.template:
             cls.template_path = str(cls.test_data_path.joinpath("invoke", cls.template))
         cls.event_path = str(cls.test_data_path.joinpath("invoke", "event.json"))
