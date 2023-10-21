@@ -1,6 +1,7 @@
 import os
 import shutil
 import uuid
+from shutil import rmtree
 from typing import Optional
 from unittest import TestCase, skipIf
 from pathlib import Path
@@ -28,6 +29,10 @@ class InvokeIntegBase(TestCase):
         cls.event_path = str(cls.test_data_path.joinpath("invoke", "event.json"))
         cls.event_utf8_path = str(cls.test_data_path.joinpath("invoke", "event_utf8.json"))
         cls.env_var_path = str(cls.test_data_path.joinpath("invoke", "vars.json"))
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        rmtree(cls.integration_dir)
 
     @classmethod
     def move_test_files_into_scratch_dir(cls):
