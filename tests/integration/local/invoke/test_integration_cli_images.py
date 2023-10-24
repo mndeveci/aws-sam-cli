@@ -44,6 +44,7 @@ class TestSamPython36HelloWorldIntegrationImages(InvokeIntegBase):
 
     @classmethod
     def tearDownClass(cls):
+        super().tearDownClass()
         try:
             cls.client.api.remove_image(cls.docker_tag)
             cls.client.api.remove_image(f"{cls.image_name}:{RAPID_IMAGE_TAG_PREFIX}-{X86_64}")
@@ -441,6 +442,7 @@ class TestDeleteOldRapidImages(InvokeIntegBase):
 
     @classmethod
     def tearDownClass(cls):
+        super().tearDownClass()
         try:
             cls.client.api.remove_image(cls.tag)
         except APIError:
