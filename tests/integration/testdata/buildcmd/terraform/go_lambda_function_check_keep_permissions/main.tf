@@ -4,7 +4,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 4.51.0"
+      version = "~> 5.29.0"
     }
   }
 }
@@ -45,7 +45,7 @@ resource "aws_lambda_function" "this" {
   function_name = "hello-world-function"
   role          = aws_iam_role.this.arn
 
-  runtime  = "provided.al2"
+  runtime  = "provided.al2023"
   handler  = "bootstrap"
   filename = "hello_world.zip"
   timeout  = 30
